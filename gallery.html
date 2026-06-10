@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Galeria · @eusouleandroribeiro</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: 'Barlow', sans-serif;
+  --bg: #ffffff;
+  background: var(--bg);
+  color: #1a1a1a;
+  overflow-x: hidden;
+  transition: background 0.35s;
+}
+
+/* ── HEADER ── */
+#site-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  background: rgba(255,255,255,0.97);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid #efefef;
+  transition: opacity 0.3s, background 0.35s, border-color 0.35s;
+}
+
+#site-header.hidden-on-cover {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.logo-wrap { display: flex; flex-direction: column; line-height: 1.15; }
+
+.logo-name {
+  font-family: 'Big Shoulders Display', sans-serif;
+  font-size: 1.05rem; font-weight: 900;
+  letter-spacing: 0.06em; color: #1a1a1a;
+  text-transform: uppercase; transition: color 0.35s;
+}
+
+.logo-slogan {
+  font-size: 0.52rem; font-weight: 400;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: #aaa; font-family: 'Barlow', sans-serif; transition: color 0.35s;
+}
+
+.hamburger {
+  background: none; border: none; cursor: pointer;
+  padding: 6px; display: flex; flex-direction: column; gap: 5px;
+}
+.hamburger span {
+  display: block; width: 22px; height: 1.5px;
+  background: #1a1a1a; border-radius: 2px; transition: background 0.35s;
+}
+
+/* ── DARK HEADER/BAR (fundos cinza e preto) ── */
+body.bg-dark #site-header,
+body.bg-dark #bottom-bar {
+  background: rgba(12,12,12,0.97);
+  border-color: rgba(255,255,255,0.07);
+}
+body.bg-dark .logo-name  { color: #e8e8e8; }
+body.bg-dark .logo-slogan { color: #555; }
+body.bg-dark .hamburger span { background: #d0d0d0; }
+body.bg-dark .bar-count { color: #555; }
+body.bg-dark .bar-heart-btn svg { stroke: #444; }
+body.bg-dark .bar-heart-btn.has-likes svg { stroke: #e04444; fill: #e04444; }
+body.bg-dark .bar-btn { background: #1e1e1e; }
+body.bg-dark .bar-btn svg { stroke: #777; }
+body.bg-dark .bar-btn:hover { background: #2a2a2a; }
+body.bg-dark .bar-btn.active { background: #e8ff47; }
+body.bg-dark .bar-btn.active svg { stroke: #111; }
+body.bg-dark .ctrl-label { color: #3a3a3a; }
+body.bg-dark .bar-sep { background: #202020; }
+body.bg-dark .bar-btn-primary { background: #e8ff47; }
+body.bg-dark .bar-btn-primary svg { stroke: #111; }
+body.bg-dark .bar-btn-primary:hover { background: #d0e838; }
+
+/* ── COVER ── */
+#cover {
+  position: relative; width: 100%; height: 100svh;
+  overflow: hidden; cursor: pointer; background: #111;
+}
+
+#cover-img {
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+  filter: brightness(0.62);
+  transition: opacity 0.5s;
+}
+#cover-img[src=""] { opacity: 0; }
+
+.cover-content {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  padding: 0 24px 72px; text-align: center;
+}
+
+.cover-title {
+  font-family: 'Big Shoulders Display', sans-serif;
+  font-size: clamp(1.9rem, 9vw, 6rem);
+  font-weight: 900;
+  color: #fff; letter-spacing: 0.05em; text-transform: uppercase;
+  line-height: 1.05;
+  word-break: break-word; overflow-wrap: break-word;
+  max-width: 100%;
+  text-shadow: 0 2px 24px rgba(0,0,0,0.4);
+}
+
+.cover-arrow {
+  margin-top: 28px; display: flex;
+  align-items: center; justify-content: center;
+  animation: bounce 2s ease-in-out infinite;
+}
+.cover-arrow svg {
+  width: 28px; height: 28px;
+  stroke: rgba(255,255,255,0.8); fill: none; stroke-width: 1.5;
+}
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(7px); }
+}
+
+/* ── GRID SECTION ── */
+#grid-section { padding-top: 56px; padding-bottom: 64px; }
+
+/* ── MASONRY (flex colunas — ordem leitura esq→dir) ── */
+.masonry {
+  display: flex;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 3px;
+  transition: gap 0.25s, padding 0.25s;
+}
+.masonry-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* Moldura: mat ao redor de cada foto */
+.masonry.size-frame { gap: 20px; padding: 20px; }
+.masonry.size-frame .masonry-col { gap: 20px; }
+.masonry.size-frame .photo-card {
+  padding: 18px 18px 36px;
+  background: var(--bg);
+  box-shadow: 0 2px 20px rgba(0,0,0,0.12);
+  overflow: visible;
+}
+body.bg-dark .masonry.size-frame .photo-card {
+  box-shadow: 0 2px 20px rgba(0,0,0,0.5);
+}
+.masonry.size-frame .photo-card img {
+  border-radius: 0 !important;
+}
+.masonry.size-frame .photo-card:hover img { transform: none; }
+
+/* Ignora gap classes quando moldura */
+.masonry.size-frame.gap-sm,
+.masonry.size-frame.gap-md,
+.masonry.size-frame.gap-lg { gap: 20px; padding: 20px; }
+.masonry.size-frame.gap-sm .masonry-col,
+.masonry.size-frame.gap-md .masonry-col,
+.masonry.size-frame.gap-lg .masonry-col { gap: 20px; }
+.masonry.size-frame.gap-sm .photo-card,
+.masonry.size-frame.gap-md .photo-card,
+.masonry.size-frame.gap-lg .photo-card { border-radius: 0 !important; }
+
+/* ── ESPAÇAMENTO ── */
+.masonry.gap-sm { gap: 1px; padding: 1px; }
+.masonry.gap-sm .masonry-col { gap: 1px; }
+
+.masonry.gap-md { gap: 3px; padding: 3px; }
+.masonry.gap-md .masonry-col { gap: 3px; }
+
+.masonry.gap-lg { gap: 10px; padding: 10px; }
+.masonry.gap-lg .masonry-col { gap: 10px; }
+.masonry.gap-lg .photo-card { border-radius: 6px; }
+
+/* ── PHOTO CARD ── */
+.photo-card {
+  position: relative; overflow: hidden;
+  cursor: pointer; background: #e8e8e8; display: block;
+  transition: border-radius 0.2s, background 0.35s, box-shadow 0.2s;
+}
+.photo-card img {
+  width: 100%; display: block;
+  opacity: 0;
+  transition: opacity 0.35s ease, transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94);
+}
+.photo-card img.loaded { opacity: 1; }
+.photo-card:hover img.loaded { transform: scale(1.03); }
+
+/* Heart on card */
+.card-heart {
+  position: absolute; top: 8px; right: 8px;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,0.88); border: none;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: scale(0.8);
+  transition: opacity 0.18s, transform 0.18s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 1px 5px rgba(0,0,0,0.15);
+}
+.photo-card:hover .card-heart, .photo-card.liked .card-heart {
+  opacity: 1; transform: scale(1);
+}
+.card-heart svg { width: 15px; height: 15px; stroke: #bbb; fill: none; stroke-width: 1.8; transition: all 0.18s; }
+.photo-card.liked .card-heart svg { stroke: #e04444; fill: #e04444; }
+
+.card-heart.pop { animation: heartpop 0.32s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes heartpop {
+  0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); }
+}
+
+/* ── BOTTOM BAR ── */
+#bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  height: 56px; background: rgba(255,255,255,0.97);
+  backdrop-filter: blur(6px); border-top: 1px solid #efefef;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px; gap: 4px; transition: background 0.35s, border-color 0.35s;
+}
+
+.bar-left { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.bar-heart-btn {
+  background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; padding: 6px; line-height: 0;
+}
+.bar-heart-btn svg { width: 22px; height: 22px; stroke: #ccc; fill: none; stroke-width: 1.6; transition: all 0.2s; }
+.bar-heart-btn.has-likes svg { stroke: #e04444; fill: #e04444; }
+.bar-count { font-size: 0.78rem; color: #999; font-weight: 400; min-width: 14px; transition: color 0.35s; }
+
+.bar-center {
+  display: flex; align-items: center; gap: 3px;
+  flex: 1; justify-content: center;
+  overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.bar-center::-webkit-scrollbar { display: none; }
+
+.bar-right { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+
+.bar-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #f5f5f5; border: none; cursor: pointer;
+  transition: background 0.18s, transform 0.15s; line-height: 0; flex-shrink: 0;
+}
+.bar-btn:hover  { background: #ebebeb; }
+.bar-btn:active { transform: scale(0.9); }
+.bar-btn svg    { width: 14px; height: 14px; stroke: #555; fill: none; stroke-width: 1.6; transition: stroke 0.2s; }
+.bar-btn.active { background: #1a1a1a; }
+.bar-btn.active svg { stroke: #fff; }
+
+.bar-btn-primary {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: #1a1a1a; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.18s, transform 0.15s; line-height: 0; flex-shrink: 0;
+}
+.bar-btn-primary:hover  { background: #333; }
+.bar-btn-primary:active { transform: scale(0.9); }
+.bar-btn-primary svg    { width: 15px; height: 15px; stroke: #fff; fill: none; stroke-width: 1.6; }
+
+.bar-sep { width: 1px; height: 16px; background: #e8e8e8; flex-shrink: 0; transition: background 0.35s; }
+
+.ctrl-group { display: flex; align-items: center; gap: 2px; }
+.ctrl-label {
+  font-size: 0.5rem; color: #bbb; letter-spacing: 0.08em;
+  text-transform: uppercase; margin-right: 1px;
+  font-family: 'Barlow', sans-serif; white-space: nowrap; transition: color 0.35s;
+}
+
+/* ── COLOR SWATCHES ── */
+.color-swatch {
+  width: 20px !important; height: 20px !important;
+  border-radius: 50% !important; border: 2px solid transparent !important;
+  padding: 0 !important; flex-shrink: 0; cursor: pointer; outline: none;
+  transition: transform 0.15s, border-color 0.15s !important;
+}
+.color-swatch:hover { transform: scale(1.2) !important; }
+body:not(.bg-dark) .color-swatch.active { border-color: #1a1a1a !important; transform: scale(1.1) !important; }
+body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; transform: scale(1.1) !important; }
+#btnBgWhite { background: #ffffff; box-shadow: 0 0 0 1px #ddd inset; }
+#btnBgGray  { background: #888888; }
+#btnBgBlack { background: #111111; }
+#btnBgAuto  { background: conic-gradient(#c9a96e 0%, #8b7aa8 40%, #6a9ab0 70%, #c9a96e 100%); }
+
+/* ── LIGHTBOX ── */
+#lightbox {
+  position: fixed; inset: 0; z-index: 500;
+  background: #f5f5f5; display: flex; flex-direction: column;
+  opacity: 0; pointer-events: none; transition: opacity 0.22s;
+}
+#lightbox.open { opacity: 1; pointer-events: all; }
+
+.lb-topbar {
+  height: 56px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 18px; background: #fff; border-bottom: 1px solid #efefef; flex-shrink: 0;
+}
+.lb-back {
+  background: none; border: none; cursor: pointer; padding: 6px; line-height: 0; color: #555;
+}
+.lb-back svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.6; }
+.lb-back:hover { color: #1a1a1a; }
+.lb-menu { background: none; border: none; cursor: pointer; padding: 6px; display: flex; flex-direction: column; gap: 4px; }
+.lb-menu span { display: block; width: 20px; height: 1.5px; background: #888; }
+
+.lb-img-area {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  overflow: hidden; padding: 16px;
+}
+.lb-img-area img {
+  max-width: 100%; max-height: 100%; object-fit: contain;
+  display: block; transition: opacity 0.18s;
+}
+
+.lb-bottombar {
+  background: #fff; border-top: 1px solid #efefef;
+  padding: 10px 20px 16px; flex-shrink: 0;
+}
+.lb-filename { font-size: 0.68rem; color: #aaa; text-align: center; margin-bottom: 12px; letter-spacing: 0.02em; }
+
+.lb-actions {
+  display: flex; align-items: center; justify-content: center; gap: 22px;
+}
+
+.lb-heart {
+  background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; padding: 8px; line-height: 0;
+  transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1);
+}
+.lb-heart:active { transform: scale(0.88); }
+.lb-heart svg { width: 26px; height: 26px; stroke: #ccc; fill: none; stroke-width: 1.6; transition: all 0.18s; }
+.lb-heart.liked svg { stroke: #e04444; fill: #e04444; }
+
+.lb-cover-btn {
+  background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; padding: 8px; line-height: 0;
+}
+.lb-cover-btn svg { width: 22px; height: 22px; stroke: #ccc; fill: none; stroke-width: 1.6; transition: all 0.18s; }
+.lb-cover-btn:hover svg { stroke: #888; }
+.lb-cover-btn.is-cover svg { stroke: #e8c744; fill: #e8c744; }
+
+.lb-dl {
+  background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; padding: 8px; line-height: 0;
+}
+.lb-dl svg { width: 24px; height: 24px; stroke: #888; fill: none; stroke-width: 1.6; transition: stroke 0.15s; }
+.lb-dl:hover svg { stroke: #1a1a1a; }
+
+.lb-counter { font-size: 0.65rem; color: #ccc; text-align: center; margin-top: 4px; }
+
+/* ── DRAWER ── */
+#drawer { position: fixed; inset: 0; z-index: 900; pointer-events: none; }
+#drawer-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.4); opacity: 0; transition: opacity 0.25s; }
+#drawer-panel {
+  position: absolute; top: 0; right: 0; width: 260px; height: 100%;
+  background: #fff; transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.16,1,0.3,1);
+  padding: 72px 28px 32px; display: flex; flex-direction: column; gap: 8px;
+}
+#drawer.open { pointer-events: all; }
+#drawer.open #drawer-overlay { opacity: 1; }
+#drawer.open #drawer-panel { transform: translateX(0); }
+
+.drawer-item {
+  font-family: 'Big Shoulders Display', sans-serif;
+  font-size: 1.2rem; font-weight: 800; color: #1a1a1a;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 12px 0; border-bottom: 1px solid #f0f0f0;
+  cursor: pointer; background: none;
+  border-left: none; border-right: none; border-top: none;
+  text-align: left; width: 100%; transition: color 0.15s;
+}
+.drawer-item:hover { color: #888; }
+.drawer-close {
+  position: absolute; top: 20px; right: 20px;
+  background: none; border: none; cursor: pointer; padding: 6px; line-height: 0;
+}
+.drawer-close svg { width: 20px; height: 20px; stroke: #888; fill: none; stroke-width: 1.6; }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed; bottom: 72px; left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  background: #1a1a1a; color: #fff; font-size: 0.68rem;
+  letter-spacing: 0.06em; padding: 9px 18px; border-radius: 20px;
+  opacity: 0; transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+  pointer-events: none; white-space: nowrap; z-index: 999;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── PASSWORD GATE ── */
+#pw-gate, #expired-gate {
+  position: fixed; inset: 0; z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(12px);
+}
+#pw-box, #expired-box {
+  background: #fff; border-radius: 16px;
+  padding: 40px 36px; max-width: 360px; width: 90%;
+  text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+#pw-icon, #expired-icon {
+  width: 40px; height: 40px; margin: 0 auto 18px;
+  stroke: #888; fill: none; stroke-width: 1.6;
+}
+#pw-gallery-name {
+  font-family: 'Big Shoulders Display', sans-serif;
+  font-size: 1.5rem; font-weight: 900; letter-spacing: 0.06em;
+  color: #111; margin-bottom: 6px; word-break: break-word;
+}
+#pw-sub, #expired-sub {
+  font-size: 0.8rem; color: #888; margin-bottom: 24px; line-height: 1.5;
+}
+#pw-input {
+  width: 100%; padding: 11px 14px; font-size: 0.9rem;
+  border: 1.5px solid #ddd; border-radius: 8px;
+  outline: none; margin-bottom: 12px; transition: border-color 0.2s;
+  font-family: inherit;
+}
+#pw-input:focus { border-color: #333; }
+#pw-input.shake { animation: inputShake 0.3s ease; }
+@keyframes inputShake {
+  0%,100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  60%      { transform: translateX(6px); }
+}
+#pw-btn {
+  width: 100%; padding: 12px; background: #111; color: #fff;
+  border: none; border-radius: 8px; font-size: 0.85rem;
+  font-weight: 600; cursor: pointer; letter-spacing: 0.04em;
+  transition: background 0.2s;
+}
+#pw-btn:hover { background: #333; }
+#pw-error { color: #e04444; font-size: 0.75rem; margin-top: 10px; min-height: 18px; }
+
+/* ── EXPIRED GATE ── */
+#expired-title {
+  font-family: 'Big Shoulders Display', sans-serif;
+  font-size: 1.8rem; font-weight: 900; letter-spacing: 0.06em;
+  color: #111; margin-bottom: 10px;
+}
+#expired-icon { stroke: #bbb; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header id="site-header" class="hidden-on-cover">
+  <div class="logo-wrap">
+    <span class="logo-name">@eusouleandroribeiro</span>
+    <span class="logo-slogan">Criatividade em Atividade</span>
+  </div>
+  <button class="hamburger" onclick="openDrawer()"><span></span><span></span></button>
+</header>
+
+<!-- COVER -->
+<section id="cover" onclick="scrollToGrid()">
+  <img id="cover-img" src="" alt="Cover" crossorigin="anonymous">
+  <div class="cover-content">
+    <h1 class="cover-title" id="coverTitle"></h1>
+    <div class="cover-arrow">
+      <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- GRID -->
+<div id="grid-section">
+  <div class="masonry size-md gap-md" id="masonry"></div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div id="bottom-bar">
+
+  <!-- Esquerda: coração + contagem -->
+  <div class="bar-left">
+    <button class="bar-heart-btn" id="barHeartBtn" onclick="openLikedView()" title="Ver favoritas">
+      <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    </button>
+    <span class="bar-count" id="barCount">0</span>
+  </div>
+
+  <!-- Centro: tamanho · espaçamento · fundo -->
+  <div class="bar-center">
+
+    <!-- Tamanho das fotos -->
+    <div class="ctrl-group">
+      <span class="ctrl-label">foto</span>
+      <button class="bar-btn" id="btnSizeSm" onclick="setGridSize('sm')" title="Pequenas">
+        <svg viewBox="0 0 18 18"><rect x="1" y="1" width="7" height="7" rx="0.5"/><rect x="10" y="1" width="7" height="7" rx="0.5"/><rect x="1" y="10" width="7" height="7" rx="0.5"/><rect x="10" y="10" width="7" height="7" rx="0.5"/></svg>
+      </button>
+      <button class="bar-btn active" id="btnSizeMd" onclick="setGridSize('md')" title="Médias">
+        <svg viewBox="0 0 18 18"><rect x="1" y="1" width="7" height="16" rx="0.5"/><rect x="10" y="1" width="7" height="16" rx="0.5"/></svg>
+      </button>
+      <button class="bar-btn" id="btnSizeLg" onclick="setGridSize('lg')" title="Grandes">
+        <svg viewBox="0 0 18 18"><rect x="1" y="1" width="16" height="16" rx="0.5"/></svg>
+      </button>
+      <button class="bar-btn" id="btnSizeFrame" onclick="setGridSize('frame')" title="Moldura">
+        <svg viewBox="0 0 18 18"><rect x="1" y="1" width="16" height="16" rx="0.5"/><rect x="3" y="3" width="12" height="12" rx="0.3" fill="none"/></svg>
+      </button>
+    </div>
+
+    <div class="bar-sep"></div>
+
+    <!-- Espaçamento -->
+    <div class="ctrl-group">
+      <span class="ctrl-label">espaço</span>
+      <button class="bar-btn" id="btnGapSm" onclick="setGap('sm')" title="Compacto">
+        <svg viewBox="0 0 18 18" stroke-width="2"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg>
+      </button>
+      <button class="bar-btn active" id="btnGapMd" onclick="setGap('md')" title="Normal">
+        <svg viewBox="0 0 18 18" stroke-width="2"><line x1="2" y1="4" x2="16" y2="4"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="14" x2="16" y2="14"/></svg>
+      </button>
+      <button class="bar-btn" id="btnGapLg" onclick="setGap('lg')" title="Espaçado">
+        <svg viewBox="0 0 18 18" stroke-width="2"><line x1="2" y1="3" x2="16" y2="3"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="15" x2="16" y2="15"/></svg>
+      </button>
+    </div>
+
+    <div class="bar-sep"></div>
+
+    <!-- Cor de fundo -->
+    <div class="ctrl-group">
+      <span class="ctrl-label">fundo</span>
+      <button class="color-swatch active" id="btnBgWhite" onclick="setBg('white')" title="Branco"></button>
+      <button class="color-swatch" id="btnBgGray"  onclick="setBg('gray')"  title="Cinza"></button>
+      <button class="color-swatch" id="btnBgBlack" onclick="setBg('black')" title="Preto"></button>
+      <button class="color-swatch" id="btnBgAuto"  onclick="setBg('auto')"  title="Cor das fotos"></button>
+    </div>
+
+  </div>
+
+  <!-- Direita: download -->
+  <div class="bar-right">
+    <button class="bar-btn-primary" id="barActionBtn" onclick="handleBarAction()" title="Salvar favoritas">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </button>
+  </div>
+
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox">
+  <div class="lb-topbar">
+    <button class="lb-back" onclick="closeLightbox()">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button class="lb-menu" onclick="openDrawer()"><span></span><span></span></button>
+  </div>
+  <div class="lb-img-area" id="lbImgArea">
+    <img id="lbImg" src="" alt="" crossorigin="anonymous">
+  </div>
+  <div class="lb-bottombar">
+    <div class="lb-filename" id="lbFilename">—</div>
+    <div class="lb-actions">
+      <!-- Favoritar -->
+      <button class="lb-heart" id="lbHeart" onclick="toggleLikeLb()">
+        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </button>
+      <!-- Definir como capa -->
+      <button class="lb-cover-btn" id="lbCoverBtn" onclick="setCoverPhoto()" title="Definir como capa do álbum">
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </button>
+      <!-- Baixar esta foto -->
+      <button class="lb-dl" onclick="downloadCurrent()" title="Baixar esta foto">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+    </div>
+    <div class="lb-counter" id="lbCounter">1 / 1</div>
+  </div>
+</div>
+
+<!-- PASSWORD GATE -->
+<div id="pw-gate" style="display:none">
+  <div id="pw-box">
+    <svg id="pw-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    <div id="pw-gallery-name"></div>
+    <div id="pw-sub">Este álbum é protegido por senha</div>
+    <input type="password" id="pw-input" placeholder="Senha do álbum" onkeydown="if(event.key==='Enter')checkPw()">
+    <button id="pw-btn" onclick="checkPw()">Entrar</button>
+    <div id="pw-error"></div>
+  </div>
+</div>
+
+<!-- EXPIRED GATE -->
+<div id="expired-gate" style="display:none">
+  <div id="expired-box">
+    <svg id="expired-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <div id="expired-title">GALERIA EXPIRADA</div>
+    <div id="expired-sub">O prazo de acesso a este álbum foi encerrado.<br>Entre em contato com o fotógrafo.</div>
+  </div>
+</div>
+
+<!-- DRAWER -->
+<div id="drawer">
+  <div id="drawer-overlay" onclick="closeDrawer()"></div>
+  <div id="drawer-panel">
+    <button class="drawer-close" onclick="closeDrawer()">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <button class="drawer-item" onclick="showAll(); closeDrawer()">Todas as fotos</button>
+    <button class="drawer-item" onclick="showLiked(); closeDrawer()">Só favoritas</button>
+    <button class="drawer-item" onclick="downloadFavorites(); closeDrawer()">Salvar favoritas</button>
+    <button class="drawer-item" onclick="downloadAll(); closeDrawer()">Salvar todas</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ──
+const SURL = 'https://vtblxwaxwuztehtxkygp.supabase.co';
+const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Ymx4d2F4d3V6dGVodHhreWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NDQzMjMsImV4cCI6MjA5NjUyMDMyM30.0oscbNInwJzc2YN5eDYN76IBXvR0cTDbaLe4LDe0aKw';
+const sb = supabase.createClient(SURL, SKEY);
+
+// ── STATE ──
+let liked         = new Set();
+let currentView   = 'all';
+let lbIndex       = 0;
+let lbPhotos      = [];
+let touchStartX   = 0;
+let PHOTOS        = [];
+let galleryId      = null;   // Supabase gallery ID
+let coverPhotoId   = null;   // foto de capa atual
+let dominantColor  = null;   // cor extraída das fotos
+let bgMode         = 'white';
+let gridSize       = 'md';
+let gridGap        = 'md';
+let downloadEnabled = true;  // controle de download por galeria
+let _pendingPwResolve = null; // resolução da promise da senha
+
+// ── INIT ──
+async function init() {
+  const slug = new URLSearchParams(window.location.search).get('slug');
+
+  if (slug) {
+    const { data, error } = await sb
+      .from('galleries')
+      .select('*, photos!photos_gallery_id_fkey(id, filename, thumb_url, full_url, position)')
+      .eq('slug', slug)
+      .eq('status', 'live')
+      .single();
+
+    if (!error && data) {
+      // Verifica expiração
+      if (data.expires_at && new Date(data.expires_at) < new Date()) {
+        document.getElementById('coverTitle').textContent = (data.name || '').toUpperCase();
+        showExpiredOverlay();
+        return;
+      }
+
+      // Verifica senha
+      if (data.access_password) {
+        const ok = await showPasswordGate(data.access_password, data.name);
+        if (!ok) return;
+      }
+
+      galleryId       = data.id;
+      coverPhotoId    = data.cover_photo_id || null;
+      downloadEnabled = data.download_enabled !== false;
+      data.photos?.sort((a, b) => a.position - b.position);
+      PHOTOS = (data.photos || []).map(p => ({
+        id: p.id, name: p.filename, thumb: p.thumb_url, full: p.full_url
+      }));
+      document.getElementById('coverTitle').textContent = data.name.toUpperCase();
+
+      // Oculta botão de download se desabilitado
+      if (!downloadEnabled) {
+        document.querySelectorAll('.lb-dl, #barActionBtn').forEach(el => el.style.display = 'none');
+        const drawer = document.getElementById('drawer-panel');
+        drawer.querySelectorAll('button').forEach(btn => {
+          if (btn.textContent.includes('Salvar')) btn.style.display = 'none';
+        });
+      }
+
+      // Capa: usa cover_photo_id se definido, senão a primeira foto
+      const coverPhoto = coverPhotoId
+        ? (PHOTOS.find(p => p.id === coverPhotoId) || PHOTOS[0])
+        : PHOTOS[0];
+      if (coverPhoto) document.getElementById('cover-img').src = coverPhoto.full;
+    } else {
+      document.getElementById('coverTitle').textContent = 'GALERIA NÃO ENCONTRADA';
+    }
+  } else {
+    // Modo demo — dados locais, sem async
+    PHOTOS = [
+      { id:1, fileId:"1Ok70X2D9C34KNyMfitJ2Xla7H3ZfDmpl", name:"LRP-001.jpg" },
+      { id:2, fileId:"1T4QV7gT-MH4nyjUxTouPPKsOwRwYlODA", name:"LRP-002.jpg" },
+      { id:3, fileId:"1_oP9bzLJlan8WF9NFg0CuYylVlBBl8Fy", name:"LRP-003.jpg" },
+      ...Array.from({length:18}, (_,i) => ({ id:i+4, fileId:null, name:`LRP-${String(i+4).padStart(3,'0')}.jpg` }))
+    ].map((p,i) => ({
+      ...p,
+      thumb: p.fileId
+        ? `https://lh3.googleusercontent.com/d/${p.fileId}=w600`
+        : `https://picsum.photos/${i%2===0?'600/800':'600/450'}?random=${i+20}`,
+      full: p.fileId
+        ? `https://lh3.googleusercontent.com/d/${p.fileId}=w1400`
+        : `https://picsum.photos/1200/800?random=${i+20}`
+    }));
+    document.getElementById('coverTitle').textContent = 'DEMO GALERIA';
+    document.getElementById('cover-img').src = PHOTOS[0].full;
+  }
+
+  lbPhotos = [...PHOTOS];
+  renderGrid(PHOTOS);
+  updateBottomBar();
+  extractDominantColor();
+}
+
+init();
+
+// ── SCROLL / OBSERVER ──
+const cover  = document.getElementById('cover');
+const header = document.getElementById('site-header');
+const obs    = new IntersectionObserver(
+  e => header.classList.toggle('hidden-on-cover', e[0].isIntersecting),
+  { threshold: 0.1 }
+);
+obs.observe(cover);
+
+function scrollToGrid() {
+  document.getElementById('grid-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── RENDER ──
+function getNumCols() {
+  const w = window.innerWidth;
+  switch (gridSize) {
+    case 'sm':    return w >= 1100 ? 7 : w >= 700 ? 5 : 3;
+    case 'md':    return w >= 1100 ? 4 : w >= 700 ? 3 : 2;
+    case 'lg':    return w >= 1100 ? 3 : w >= 700 ? 2 : 1;
+    case 'frame': return w >= 1000 ? 3 : w >= 600 ? 2 : 1;
+    default:      return 2;
+  }
+}
+
+function renderGrid(photos) {
+  const grid = document.getElementById('masonry');
+  grid.innerHTML = '';
+  const n = getNumCols();
+
+  // Cria N colunas flex
+  const cols = Array.from({length: n}, () => {
+    const col = document.createElement('div');
+    col.className = 'masonry-col';
+    grid.appendChild(col);
+    return col;
+  });
+
+  // Distribui fotos da esquerda para direita (idx % n),
+  // mantendo ordem cronológica na leitura visual
+  photos.forEach((photo, idx) => {
+    const card = document.createElement('div');
+    card.className = 'photo-card' + (liked.has(photo.id) ? ' liked' : '');
+    card.dataset.id = photo.id;
+    card.innerHTML = `
+      <img src="${photo.thumb}"
+           loading="${idx < 8 ? 'eager' : 'lazy'}"
+           decoding="async"
+           alt="${photo.name}"
+           onload="this.classList.add('loaded')"
+           onclick="openLightbox(${idx}, event)">
+      <button class="card-heart" onclick="toggleLike(event,${photo.id},this)" title="Favoritar">
+        <svg viewBox="0 0 24 24" stroke-width="1.8">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+      </button>
+    `;
+    cols[idx % n].appendChild(card);
+  });
+
+  lbPhotos = photos;
+}
+
+// ── GRID SIZE ──
+function setGridSize(size) {
+  const grid = document.getElementById('masonry');
+  grid.classList.remove('size-sm','size-md','size-lg','size-frame');
+  grid.classList.add('size-' + size);
+  gridSize = size;
+  ['Sm','Md','Lg','Frame'].forEach(s =>
+    document.getElementById('btnSize'+s).classList.toggle('active', size === s.toLowerCase())
+  );
+  renderGrid(lbPhotos); // re-renderiza com nova contagem de colunas
+}
+
+// Atualiza colunas ao redimensionar janela (ex: rotação mobile)
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => { if (lbPhotos.length) renderGrid(lbPhotos); }, 220);
+});
+
+// ── ESPAÇAMENTO ──
+function setGap(gap) {
+  const grid = document.getElementById('masonry');
+  grid.classList.remove('gap-sm','gap-md','gap-lg');
+  grid.classList.add('gap-' + gap);
+  gridGap = gap;
+  ['Sm','Md','Lg'].forEach(s =>
+    document.getElementById('btnGap'+s).classList.toggle('active', gap === s.toLowerCase())
+  );
+}
+
+// ── COR DE FUNDO ──
+function setBg(mode) {
+  const map = {
+    white: '#ffffff',
+    gray:  '#888888',
+    black: '#111111',
+    auto:  dominantColor || '#7a7a7a'
+  };
+  const color = map[mode] || '#ffffff';
+  bgMode = mode;
+  document.body.style.setProperty('--bg', color);
+  document.body.classList.toggle('bg-dark',
+    mode === 'gray' || mode === 'black' || (mode === 'auto' && isDark(dominantColor))
+  );
+  ['White','Gray','Black','Auto'].forEach(s =>
+    document.getElementById('btnBg'+s).classList.toggle('active', mode === s.toLowerCase())
+  );
+}
+
+function isDark(hex) {
+  if (!hex) return false;
+  const m = hex.match(/\d+/g);
+  if (!m || m.length < 3) return false;
+  const [r,g,b] = m.map(Number);
+  return (r*0.299 + g*0.587 + b*0.114) < 140;
+}
+
+// ── COR DOMINANTE ──
+function extractDominantColor() {
+  if (PHOTOS.length === 0) return;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 40; canvas.height = 40;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, 40, 40);
+      const d = ctx.getImageData(0, 0, 40, 40).data;
+      let r=0, g=0, b=0, n = d.length / 4;
+      for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i+1]; b += d[i+2]; }
+      r = Math.round(r/n); g = Math.round(g/n); b = Math.round(b/n);
+      dominantColor = `rgb(${r},${g},${b})`;
+      document.getElementById('btnBgAuto').style.background = dominantColor;
+      // Atualiza fundo se já estava em modo auto
+      if (bgMode === 'auto') setBg('auto');
+    } catch(e) { /* CORS — mantém gradiente decorativo */ }
+  };
+  img.src = PHOTOS[0].thumb + (PHOTOS[0].thumb.includes('?') ? '&' : '?') + '_nc=' + Date.now();
+}
+
+// ── FOTO DE CAPA ──
+async function setCoverPhoto() {
+  const photo = lbPhotos[lbIndex];
+  if (!photo) return;
+
+  // Atualiza visualmente
+  const coverImg = document.getElementById('cover-img');
+  coverImg.style.opacity = '0';
+  setTimeout(() => { coverImg.src = photo.full; coverImg.style.opacity = '1'; }, 200);
+
+  coverPhotoId = photo.id;
+  document.getElementById('lbCoverBtn').classList.add('is-cover');
+  setTimeout(() => document.getElementById('lbCoverBtn').classList.remove('is-cover'), 1800);
+
+  // Persiste no Supabase
+  if (galleryId) {
+    const { error } = await sb
+      .from('galleries')
+      .update({ cover_photo_id: photo.id })
+      .eq('id', galleryId);
+    toast(error ? 'Erro ao salvar capa' : 'Foto de capa atualizada!');
+  } else {
+    toast('Capa definida (demo)');
+  }
+}
+
+// ── LIKE ──
+function toggleLike(e, id, btn) {
+  if (e) e.stopPropagation();
+  const wasLiked = liked.has(id);
+  wasLiked ? liked.delete(id) : liked.add(id);
+  if (!wasLiked) trackEvent('like', id);
+
+  if (!wasLiked && btn) {
+    btn.classList.add('pop');
+    btn.addEventListener('animationend', () => btn.classList.remove('pop'), {once:true});
+  }
+
+  const card = document.querySelector(`.photo-card[data-id="${id}"]`);
+  if (card) card.classList.toggle('liked', !wasLiked);
+
+  if (currentView === 'liked') {
+    const favs = PHOTOS.filter(p => liked.has(p.id));
+    if (favs.length === 0) showAll(); else renderGrid(favs);
+  }
+  updateBottomBar();
+  updateLbHeart();
+}
+
+function toggleLikeLb() {
+  const photo = lbPhotos[lbIndex];
+  if (!photo) return;
+  const btn = document.getElementById('lbHeart');
+  const wasLiked = liked.has(photo.id);
+  wasLiked ? liked.delete(photo.id) : liked.add(photo.id);
+  if (!wasLiked) trackEvent('like', photo.id);
+  btn.classList.toggle('liked', !wasLiked);
+  const card = document.querySelector(`.photo-card[data-id="${photo.id}"]`);
+  if (card) card.classList.toggle('liked', !wasLiked);
+  updateBottomBar();
+}
+
+function updateLbHeart() {
+  if (!lbPhotos[lbIndex]) return;
+  document.getElementById('lbHeart').classList.toggle('liked', liked.has(lbPhotos[lbIndex].id));
+}
+
+function updateBottomBar() {
+  const n = liked.size;
+  document.getElementById('barCount').textContent = n;
+  document.getElementById('barHeartBtn').classList.toggle('has-likes', n > 0);
+  document.getElementById('barActionBtn').title = n > 0 ? `Salvar ${n} favorita(s)` : 'Salvar todas';
+}
+
+// ── VIEWS ──
+function showAll() {
+  currentView = 'all'; lbPhotos = [...PHOTOS]; renderGrid(PHOTOS);
+}
+function showLiked() {
+  const favs = PHOTOS.filter(p => liked.has(p.id));
+  if (favs.length === 0) { toast('Nenhuma foto favoritada ainda'); return; }
+  currentView = 'liked'; lbPhotos = favs; renderGrid(favs);
+}
+function openLikedView() {
+  if (liked.size === 0) { toast('Toque no ♡ das fotos para favoritar'); return; }
+  showLiked();
+  document.getElementById('grid-section').scrollIntoView({behavior:'smooth'});
+}
+
+// ── LIGHTBOX ──
+function openLightbox(idx, e) {
+  if (e) e.stopPropagation();
+  lbIndex = idx;
+  setLbPhoto(lbPhotos[idx]);
+  document.getElementById('lbCounter').textContent = `${idx+1} / ${lbPhotos.length}`;
+  document.getElementById('lightbox').classList.add('open');
+  document.addEventListener('keydown', lbKey);
+  trackEvent('view', lbPhotos[idx].id);
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.removeEventListener('keydown', lbKey);
+}
+function setLbPhoto(photo) {
+  const img = document.getElementById('lbImg');
+  img.style.opacity = '0';
+  setTimeout(() => { img.src = photo.full; img.style.opacity = '1'; }, 120);
+  document.getElementById('lbFilename').textContent = photo.name;
+  document.getElementById('lbCoverBtn').classList.toggle('is-cover', photo.id === coverPhotoId);
+  updateLbHeart();
+}
+function lbNav(dir) {
+  lbIndex = (lbIndex + dir + lbPhotos.length) % lbPhotos.length;
+  setLbPhoto(lbPhotos[lbIndex]);
+  document.getElementById('lbCounter').textContent = `${lbIndex+1} / ${lbPhotos.length}`;
+}
+function lbKey(e) {
+  if (e.key==='ArrowRight') lbNav(1);
+  if (e.key==='ArrowLeft')  lbNav(-1);
+  if (e.key==='Escape')     closeLightbox();
+}
+
+// Swipe mobile
+document.getElementById('lbImgArea').addEventListener('touchstart',
+  e => { touchStartX = e.changedTouches[0].clientX; }, {passive:true});
+document.getElementById('lbImgArea').addEventListener('touchend',
+  e => { const dx = e.changedTouches[0].clientX - touchStartX; if (Math.abs(dx) > 50) lbNav(dx < 0 ? 1 : -1); }, {passive:true});
+
+// ── DOWNLOAD ──
+function downloadCurrent() {
+  const p = lbPhotos[lbIndex];
+  trackEvent('save', p.id);
+  dl(p.full, p.name);
+  toast('Download iniciado');
+}
+function downloadFavorites() {
+  const favs = PHOTOS.filter(p => liked.has(p.id));
+  if (favs.length === 0) { toast('Nenhuma foto favoritada ainda'); return; }
+  toast(`Salvando ${favs.length} favorita(s)...`);
+  favs.forEach((p,i) => setTimeout(() => dl(p.full, p.name), i * 350));
+}
+function downloadAll() {
+  toast(`Salvando ${PHOTOS.length} fotos...`);
+  PHOTOS.forEach((p,i) => setTimeout(() => dl(p.full, p.name), i * 300));
+}
+function dl(url, filename) {
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.target = '_blank';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ── AÇÃO PRINCIPAL ──
+function handleBarAction() {
+  liked.size > 0
+    ? downloadFavorites()
+    : toast('Favorite fotos com ♡ ou use o menu para salvar todas');
+}
+
+// ── DRAWER ──
+function openDrawer()  { document.getElementById('drawer').classList.add('open'); }
+function closeDrawer() { document.getElementById('drawer').classList.remove('open'); }
+
+// ── VISITOR ID ──
+function getVisitorId() {
+  const KEY = 'lrp_vid';
+  let vid = localStorage.getItem(KEY);
+  if (!vid) {
+    vid = (crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2));
+    localStorage.setItem(KEY, vid);
+  }
+  return vid;
+}
+
+// ── EVENT TRACKING ──
+async function trackEvent(type, photoId) {
+  if (!galleryId || !photoId) return;
+  try {
+    await sb.from('photo_events').insert({
+      gallery_id: galleryId,
+      photo_id:   photoId,
+      event_type: type,
+      visitor_id: getVisitorId()
+    });
+  } catch(e) { /* silencioso */ }
+}
+
+// ── PASSWORD GATE ──
+function showPasswordGate(password, galleryName) {
+  return new Promise(resolve => {
+    _pendingPwResolve = resolve;
+    const gate = document.getElementById('pw-gate');
+    if (galleryName) document.getElementById('pw-gallery-name').textContent = galleryName.toUpperCase();
+    gate.style.display = 'flex';
+    document.getElementById('pw-input').focus();
+    // store password for checkPw
+    gate.dataset.pw = password;
+  });
+}
+
+function checkPw() {
+  const gate  = document.getElementById('pw-gate');
+  const input = document.getElementById('pw-input');
+  const err   = document.getElementById('pw-error');
+  if (input.value === gate.dataset.pw) {
+    gate.style.display = 'none';
+    if (_pendingPwResolve) { _pendingPwResolve(true); _pendingPwResolve = null; }
+  } else {
+    err.textContent = 'Senha incorreta';
+    input.value = '';
+    input.classList.add('shake');
+    input.addEventListener('animationend', () => input.classList.remove('shake'), {once:true});
+  }
+}
+
+// ── EXPIRED OVERLAY ──
+function showExpiredOverlay() {
+  document.getElementById('expired-gate').style.display = 'flex';
+}
+
+// ── TOAST ──
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>

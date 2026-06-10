@@ -1,0 +1,1883 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · @eusouleandroribeiro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=DM+Mono:wght@300;400&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0d0d;
+  --panel: #141414;
+  --panel2: #1a1a1a;
+  --border: #252525;
+  --border2: #2e2e2e;
+  --text: #f0ece6;
+  --muted: #666;
+  --subtle: #3a3a3a;
+  --accent: #e8ff47;
+  --accent2: rgba(232,255,71,0.1);
+  --red: #ff4f4f;
+  --green: #47ffb2;
+  --mono: 'DM Mono', monospace;
+  --display: 'Big Shoulders Display', sans-serif;
+  --body: 'Barlow', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── LAYOUT ── */
+#app {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  #app { grid-template-columns: 1fr; }
+  #sidebar { display: none; }
+  #sidebar.mobile-open { display: flex; position: fixed; inset: 0; z-index: 300; }
+}
+
+/* ── SIDEBAR ── */
+#sidebar {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar-brand {
+  padding: 28px 24px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-brand-name {
+  font-family: var(--display);
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.sidebar-brand-tag {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--accent);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-label {
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 12px;
+  margin: 12px 0 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: var(--body);
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  width: 100%;
+  text-align: left;
+}
+
+.nav-item:hover { background: var(--panel2); color: var(--text); }
+
+.nav-item.active {
+  background: var(--accent2);
+  color: var(--accent);
+}
+
+.nav-item svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  flex-shrink: 0;
+}
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--subtle);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+
+.nav-item.active .nav-badge {
+  background: var(--accent2);
+  color: var(--accent);
+}
+
+.sidebar-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: var(--bg);
+  flex-shrink: 0;
+}
+
+.user-info { flex: 1; min-width: 0; }
+
+.user-name {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-plan {
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  color: var(--green);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* ── MAIN ── */
+#main {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  height: 60px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.topbar-title {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-family: var(--body);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+  white-space: nowrap;
+}
+
+.btn svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-primary:hover { background: #f5ff7a; }
+
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+}
+
+.btn-ghost:hover { border-color: var(--subtle); color: var(--text); }
+
+.btn-danger {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--muted);
+}
+
+.btn-danger:hover { border-color: var(--red); color: var(--red); }
+
+/* ── CONTENT ── */
+#content {
+  flex: 1;
+  padding: 32px;
+  overflow-y: auto;
+}
+
+/* ── SCREEN ── */
+.screen { display: none; animation: fadeIn 0.2s ease; }
+.screen.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── DASHBOARD ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+@media (max-width: 600px) { .stats-row { grid-template-columns: 1fr; } }
+
+.stat-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.stat-label {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-family: var(--display);
+  font-size: 2.4rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--text);
+}
+
+.stat-value.accent { color: var(--accent); }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── GALLERY CARDS ── */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.gallery-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.18s, transform 0.18s;
+}
+
+.gallery-card:hover {
+  border-color: var(--border2);
+  transform: translateY(-2px);
+}
+
+.gallery-card-thumb {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  background: var(--panel2);
+  display: block;
+  filter: brightness(0.85);
+  transition: filter 0.2s;
+}
+
+.gallery-card:hover .gallery-card-thumb { filter: brightness(1); }
+
+.gallery-card-body {
+  padding: 14px 16px;
+}
+
+.gallery-card-name {
+  font-family: var(--display);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gallery-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gallery-card-info {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.status-badge {
+  font-family: var(--mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 3px;
+}
+
+.status-live { background: rgba(71,255,178,0.1); color: var(--green); }
+.status-draft { background: rgba(255,255,255,0.05); color: var(--muted); }
+
+.gallery-card-actions {
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── NEW GALLERY FORM ── */
+.form-section {
+  max-width: 640px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.form-input {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 11px 14px;
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.form-input:focus { border-color: var(--accent); }
+.form-input::placeholder { color: var(--muted); }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+
+/* ── UPLOAD ZONE ── */
+.upload-zone {
+  border: 1.5px dashed var(--border2);
+  border-radius: 8px;
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+  background: var(--panel);
+}
+
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent2);
+}
+
+.upload-zone input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.upload-icon {
+  width: 40px;
+  height: 40px;
+  stroke: var(--muted);
+  fill: none;
+  stroke-width: 1.2;
+  margin: 0 auto 14px;
+  display: block;
+  transition: stroke 0.2s;
+}
+
+.upload-zone:hover .upload-icon { stroke: var(--accent); }
+
+.upload-title {
+  font-family: var(--display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.upload-sub {
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+/* ── UPLOAD PROGRESS ── */
+.upload-list {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.upload-item {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: fadeIn 0.2s ease;
+}
+
+.upload-item-name {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.upload-item-size {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.upload-progress-bar {
+  width: 80px;
+  height: 3px;
+  background: var(--subtle);
+  border-radius: 2px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.upload-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.upload-status {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  flex-shrink: 0;
+}
+
+.upload-status.done { color: var(--green); }
+.upload-status.uploading { color: var(--accent); }
+.upload-status.error { color: var(--red); }
+
+/* ── GALLERY DETAIL ── */
+.gallery-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.gallery-detail-title {
+  font-family: var(--display);
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text);
+  line-height: 1;
+}
+
+.gallery-detail-meta {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  margin-top: 6px;
+}
+
+.link-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.link-box-label {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.link-box-url {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.link-box .btn { flex-shrink: 0; }
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px;
+}
+
+.detail-photo {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  background: var(--panel2);
+  cursor: pointer;
+}
+
+.detail-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s, filter 0.3s;
+}
+
+.detail-photo:hover img {
+  transform: scale(1.05);
+  filter: brightness(0.7);
+}
+
+.detail-photo-del {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.7);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.detail-photo:hover .detail-photo-del { opacity: 1; }
+
+.detail-photo-del svg {
+  width: 12px;
+  height: 12px;
+  stroke: #fff;
+  fill: none;
+  stroke-width: 2;
+}
+
+/* ── EMPTY ── */
+.empty-dash {
+  padding: 64px 24px;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.empty-dash svg {
+  width: 36px;
+  height: 36px;
+  stroke: var(--subtle);
+  fill: none;
+  margin-bottom: 16px;
+}
+
+.empty-dash-title {
+  font-family: var(--display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.empty-dash-sub {
+  font-size: 0.72rem;
+  color: var(--subtle);
+}
+
+/* ── ADMIN SELECT ── */
+.admin-select {
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  min-width: 220px;
+}
+.admin-select:focus { border-color: var(--accent); }
+
+/* ── ANALYTICS TABLE ── */
+.atbl-header {
+  display: grid;
+  grid-template-columns: 44px 1fr 90px 90px 90px;
+  gap: 0;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px 8px 0 0;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  align-items: center;
+}
+.atbl-sort {
+  background: none; border: none; cursor: pointer;
+  font-family: var(--mono); font-size: 0.55rem;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--muted); text-align: right;
+  padding: 0; transition: color 0.15s;
+}
+.atbl-sort:hover, .atbl-sort.active { color: var(--accent); }
+
+.atbl-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 90px 90px 90px;
+  gap: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-top: none;
+  align-items: center;
+  transition: background 0.15s;
+}
+.atbl-row:hover { background: var(--panel); }
+.atbl-row:last-child { border-radius: 0 0 8px 8px; }
+.atbl-thumb {
+  width: 36px; height: 36px; border-radius: 4px;
+  object-fit: cover; display: block;
+  background: var(--panel2);
+}
+.atbl-name {
+  font-size: 0.68rem; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-right: 16px;
+}
+.atbl-num {
+  text-align: right;
+  font-family: var(--mono); font-size: 0.72rem; color: var(--text);
+}
+.atbl-num.accent { color: var(--accent); }
+.atbl-row:nth-child(1) .atbl-rank { color: var(--accent); }
+
+/* ── SETTINGS ── */
+.settings-group {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 20px 16px;
+  margin-bottom: 16px;
+}
+.settings-group-title {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+.toggle-label { font-size: 0.78rem; color: var(--text); margin-bottom: 2px; }
+.toggle-desc  { font-size: 0.65rem; color: var(--muted); }
+.toggle-btn {
+  width: 40px; height: 22px; border-radius: 11px;
+  background: var(--subtle); border: none; cursor: pointer;
+  position: relative; transition: background 0.2s; flex-shrink: 0;
+}
+.toggle-btn[data-on="true"] { background: var(--accent); }
+.toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; transition: transform 0.2s;
+}
+.toggle-btn[data-on="true"] .toggle-thumb { transform: translateX(18px); }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--panel2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  padding: 10px 20px;
+  border-radius: 6px;
+  z-index: 9999;
+  opacity: 0;
+  transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast.success { border-color: var(--green); color: var(--green); }
+#toast.error   { border-color: var(--red);   color: var(--red); }
+
+/* ── MOBILE TOPBAR ── */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  color: var(--muted);
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-btn { display: flex; }
+}
+
+.mobile-menu-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-name">@eusouleandroribeiro</div>
+      <div class="sidebar-brand-tag">Painel Admin</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <span class="nav-label">Principal</span>
+      <button class="nav-item active" id="nav-dashboard" onclick="goTo('dashboard')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Galerias
+        <span class="nav-badge" id="nav-badge">0</span>
+      </button>
+      <button class="nav-item" id="nav-new" onclick="goTo('new')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Nova Galeria
+      </button>
+
+      <span class="nav-label">Sistema</span>
+      <button class="nav-item" id="nav-analytics" onclick="goTo('analytics')">
+        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Analytics
+      </button>
+      <button class="nav-item" id="nav-settings" onclick="goTo('settings')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Configurações
+      </button>
+      <button class="nav-item" id="nav-backup" onclick="goTo('backup')">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Backup
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar">L</div>
+        <div class="user-info">
+          <div class="user-name">Leandro Ribeiro</div>
+          <div class="user-plan">● Ativo</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main id="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="toggleMobileSidebar()">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="topbar-title" id="topbar-title">Galerias</span>
+      <div class="topbar-actions" id="topbar-actions">
+        <button class="btn btn-primary" onclick="goTo('new')">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nova Galeria
+        </button>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div id="content">
+
+      <!-- ── DASHBOARD ── -->
+      <div class="screen active" id="screen-dashboard">
+
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Galerias ativas</div>
+            <div class="stat-value accent" id="stat-active">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total de fotos</div>
+            <div class="stat-value" id="stat-photos">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Clientes</div>
+            <div class="stat-value" id="stat-clients">0</div>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <span class="section-title">Todas as galerias</span>
+        </div>
+
+        <div class="gallery-grid" id="gallery-grid">
+          <!-- renderizado via JS -->
+        </div>
+
+        <div class="empty-dash" id="empty-dash" style="display:none">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div class="empty-dash-title">Nenhuma galeria ainda</div>
+          <div class="empty-dash-sub">Crie sua primeira galeria para começar</div>
+        </div>
+
+      </div>
+
+      <!-- ── NOVA GALERIA ── -->
+      <div class="screen" id="screen-new">
+        <div class="form-section">
+
+          <div class="form-group">
+            <label class="form-label">Nome do evento / cliente</label>
+            <input type="text" class="form-input" id="input-name" placeholder="Ex: Congresso Saúde 2026">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Data</label>
+              <input type="date" class="form-input" id="input-date">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Local</label>
+              <input type="text" class="form-input" id="input-location" placeholder="Ex: São Paulo, SP">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Fotos</label>
+            <div class="upload-zone" id="upload-zone">
+              <input type="file" id="file-input" multiple accept="image/*" onchange="handleFiles(this.files)">
+              <svg class="upload-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div class="upload-title">Solte as fotos aqui</div>
+              <div class="upload-sub">ou clique para selecionar · JPG, PNG · máx 20MB por arquivo</div>
+            </div>
+            <div class="upload-list" id="upload-list"></div>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:8px">
+            <button class="btn btn-primary" onclick="createGallery()">
+              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              Criar galeria
+            </button>
+            <button class="btn btn-ghost" onclick="goTo('dashboard')">Cancelar</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── DETALHE DA GALERIA ── -->
+      <div class="screen" id="screen-detail">
+
+        <div class="gallery-detail-header">
+          <div>
+            <div class="gallery-detail-title" id="detail-title">—</div>
+            <div class="gallery-detail-meta" id="detail-meta">—</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost" onclick="previewGallery()">
+              <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Ver galeria
+            </button>
+            <button class="btn btn-danger" onclick="deleteCurrentGallery()">
+              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              Excluir
+            </button>
+          </div>
+        </div>
+
+        <div class="link-box">
+          <span class="link-box-label">Link do cliente</span>
+          <span class="link-box-url" id="detail-link">—</span>
+          <button class="btn btn-ghost" onclick="copyLink()">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copiar
+          </button>
+        </div>
+
+        <div class="section-header" style="margin-bottom:12px">
+          <span class="section-title" id="detail-photo-count">0 fotos</span>
+          <div style="display:flex;gap:8px">
+            <label class="btn btn-ghost" style="cursor:pointer">
+              <input type="file" multiple accept="image/*" style="display:none" onchange="addPhotosToDetail(this.files)">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Adicionar fotos
+            </label>
+          </div>
+        </div>
+
+        <div class="detail-grid" id="detail-grid"></div>
+
+      </div>
+
+      <!-- ── ANALYTICS ── -->
+      <div class="screen" id="screen-analytics">
+
+        <div class="stats-row" id="analytics-totals">
+          <div class="stat-card">
+            <div class="stat-label">Views totais</div>
+            <div class="stat-value accent" id="astat-views">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Favoritos</div>
+            <div class="stat-value" id="astat-likes">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Downloads</div>
+            <div class="stat-value" id="astat-saves">—</div>
+          </div>
+        </div>
+
+        <div class="section-header" style="margin-bottom:16px">
+          <span class="section-title">Por galeria</span>
+          <select id="analytics-gallery-select" class="admin-select" onchange="loadGalleryAnalytics(this.value)">
+            <option value="">Selecione uma galeria</option>
+          </select>
+        </div>
+
+        <div id="analytics-table-wrap" style="display:none">
+          <div class="atbl-header">
+            <span></span>
+            <span>Arquivo</span>
+            <button class="atbl-sort active" id="sort-views" onclick="sortAnalytics('views')">Views</button>
+            <button class="atbl-sort" id="sort-likes" onclick="sortAnalytics('likes')">Favoritadas</button>
+            <button class="atbl-sort" id="sort-saves" onclick="sortAnalytics('saves')">Downloads</button>
+          </div>
+          <div id="analytics-table-body"></div>
+        </div>
+
+        <div id="analytics-empty" style="color:var(--muted);font-size:0.7rem;padding:30px 0">
+          Selecione uma galeria para ver os dados.
+        </div>
+
+      </div>
+
+      <!-- ── SETTINGS ── -->
+      <div class="screen" id="screen-settings">
+
+        <div class="section-header" style="margin-bottom:24px">
+          <span class="section-title">Galeria</span>
+          <select id="settings-gallery-select" class="admin-select" onchange="loadGallerySettings(this.value)">
+            <option value="">Selecione uma galeria</option>
+          </select>
+        </div>
+
+        <div id="settings-form" style="display:none; max-width:560px">
+
+          <div class="settings-group">
+            <div class="settings-group-title">Informações</div>
+            <div class="form-group">
+              <label class="form-label">Título da galeria</label>
+              <input type="text" class="form-input" id="set-name" placeholder="Nome do evento">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-group">
+                <label class="form-label">Data do evento</label>
+                <input type="date" class="form-input" id="set-date">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Local</label>
+                <input type="text" class="form-input" id="set-location" placeholder="São Paulo, SP">
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-group-title">Acesso</div>
+            <div class="form-group">
+              <label class="form-label">Senha do álbum <span style="color:var(--muted)">(deixe em branco para sem senha)</span></label>
+              <input type="text" class="form-input" id="set-password" placeholder="Ex: evento2024">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Link expira em</label>
+              <input type="datetime-local" class="form-input" id="set-expires">
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-group-title">Permissões</div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Download de fotos</div>
+                <div class="toggle-desc">Permite ao cliente baixar as imagens</div>
+              </div>
+              <button class="toggle-btn" id="set-download" onclick="toggleDownload()" data-on="true">
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Status da galeria</div>
+                <div class="toggle-desc">Publicada e acessível pelo link</div>
+              </div>
+              <button class="toggle-btn" id="set-status" onclick="toggleStatus()" data-on="true">
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:8px">
+            <button class="btn btn-primary" onclick="saveGallerySettings()">
+              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              Salvar alterações
+            </button>
+          </div>
+
+        </div>
+
+        <div id="settings-empty" style="color:var(--muted);font-size:0.7rem;padding:30px 0">
+          Selecione uma galeria para editar as configurações.
+        </div>
+
+      </div>
+
+      <!-- ── BACKUP ── -->
+      <div class="screen" id="screen-backup">
+        <div style="max-width:600px">
+
+          <div class="settings-group">
+            <div class="settings-group-title">Exportar dados</div>
+
+            <div class="toggle-row" style="flex-direction:column;align-items:flex-start;gap:12px;padding:18px 0">
+              <div>
+                <div class="toggle-label">Metadados (JSON)</div>
+                <div class="toggle-desc">Exporta galerias, fotos e analytics em JSON. Rápido, sem imagens.</div>
+              </div>
+              <button class="btn btn-ghost" onclick="backupJSON()">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Baixar JSON
+              </button>
+            </div>
+
+            <div class="toggle-row" style="flex-direction:column;align-items:flex-start;gap:12px;padding:18px 0">
+              <div>
+                <div class="toggle-label">Backup completo (ZIP)</div>
+                <div class="toggle-desc">Exporta metadados + todas as fotos originais. Pode demorar conforme o volume.</div>
+              </div>
+              <button class="btn btn-primary" id="btn-backup-zip" onclick="backupZIP()">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Baixar ZIP completo
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-group" id="backup-progress-wrap" style="display:none">
+            <div class="settings-group-title">Progresso</div>
+            <div style="padding:6px 0 2px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+                <span id="backup-progress-label" style="font-size:0.72rem;color:var(--text)">Preparando...</span>
+                <span id="backup-progress-pct" style="font-family:var(--mono);font-size:0.65rem;color:var(--muted)">0%</span>
+              </div>
+              <div style="height:4px;background:var(--subtle);border-radius:2px;overflow:hidden">
+                <div id="backup-progress-bar" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width 0.3s ease"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-group" id="backup-last-wrap" style="display:none">
+            <div class="settings-group-title">Último backup</div>
+            <div style="padding:4px 0">
+              <span id="backup-last-label" style="font-size:0.72rem;color:var(--muted)"></span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// ── SUPABASE ──
+const SURL = 'https://vtblxwaxwuztehtxkygp.supabase.co';
+const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Ymx4d2F4d3V6dGVodHhreWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NDQzMjMsImV4cCI6MjA5NjUyMDMyM30.0oscbNInwJzc2YN5eDYN76IBXvR0cTDbaLe4LDe0aKw';
+const sb = supabase.createClient(SURL, SKEY);
+const BUCKET = 'gallery-photos';
+const BASE_URL = 'https://lrp-gallery.vercel.app';
+
+// ── STATE ──
+let galleries = [];
+let currentGalleryId = null;
+let pendingFiles = [];
+
+// ── NAVIGATION ──
+const SCREENS = {
+  dashboard: { title: 'Galerias',       nav: 'nav-dashboard' },
+  new:       { title: 'Nova Galeria',   nav: 'nav-new'       },
+  detail:    { title: 'Galeria',        nav: null            },
+  analytics: { title: 'Analytics',      nav: 'nav-analytics' },
+  settings:  { title: 'Configurações',  nav: 'nav-settings'  },
+  backup:    { title: 'Backup',         nav: 'nav-backup'    }
+};
+
+function goTo(screen) {
+  Object.keys(SCREENS).forEach(s => {
+    document.getElementById(`screen-${s}`).classList.toggle('active', s === screen);
+    const navId = SCREENS[s].nav;
+    if(navId) document.getElementById(navId).classList.toggle('active', s === screen);
+  });
+  document.getElementById('topbar-title').textContent = SCREENS[screen]?.title || 'Admin';
+
+  const actions = document.getElementById('topbar-actions');
+  if(screen === 'detail') {
+    actions.innerHTML = `<button class="btn btn-ghost" onclick="goTo('dashboard')">
+      <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      Voltar
+    </button>`;
+  } else if(screen === 'new') {
+    actions.innerHTML = '';
+  } else {
+    actions.innerHTML = `<button class="btn btn-primary" onclick="goTo('new')">
+      <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nova Galeria
+    </button>`;
+  }
+
+  if(screen === 'dashboard') renderDashboard();
+  if(screen === 'new')       resetNewForm();
+  if(screen === 'analytics') initAnalyticsScreen();
+  if(screen === 'settings')  initSettingsScreen();
+  if(screen === 'backup')    initBackupScreen();
+}
+
+function toggleMobileSidebar() {
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+}
+
+// ── DASHBOARD ──
+async function renderDashboard() {
+  const grid = document.getElementById('gallery-grid');
+  const empty = document.getElementById('empty-dash');
+  grid.innerHTML = '<div style="color:var(--muted);font-size:0.7rem;padding:20px">Carregando...</div>';
+
+  const { data, error } = await sb
+    .from('galleries')
+    .select('*, photos!photos_gallery_id_fkey(id, thumb_url)')
+    .order('created_at', { ascending: false });
+
+  if(error) { toast('Erro ao carregar galerias: ' + error.message, 'error'); return; }
+  galleries = data || [];
+
+  const active = galleries.filter(g => g.status === 'live').length;
+  const totalPhotos = galleries.reduce((s,g) => s + (g.photos?.length||0), 0);
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('stat-photos').textContent = totalPhotos;
+  document.getElementById('stat-clients').textContent = galleries.length;
+  document.getElementById('nav-badge').textContent = galleries.length;
+
+  if(galleries.length === 0) {
+    grid.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+
+  grid.style.display = 'grid';
+  empty.style.display = 'none';
+  grid.innerHTML = '';
+
+  galleries.forEach(g => {
+    const thumb = g.photos?.[0]?.thumb_url || `https://picsum.photos/400/225?random=${g.id}`;
+    const card = document.createElement('div');
+    card.className = 'gallery-card';
+    card.innerHTML = `
+      <img class="gallery-card-thumb" src="${thumb}" alt="${g.name}" loading="lazy">
+      <div class="gallery-card-body">
+        <div class="gallery-card-name">${g.name}</div>
+        <div class="gallery-card-meta">
+          <span class="gallery-card-info">${g.photos?.length||0} fotos · ${g.date||'—'}</span>
+          <span class="status-badge ${g.status==='live'?'status-live':'status-draft'}">${g.status==='live'?'Live':'Rascunho'}</span>
+        </div>
+      </div>
+      <div class="gallery-card-actions">
+        <button class="btn btn-ghost" style="padding:6px 12px;font-size:0.65rem" onclick="openDetail('${g.id}')">
+          <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Gerenciar
+        </button>
+        <button class="btn btn-ghost" style="padding:6px 12px;font-size:0.65rem" onclick="copyClientLink('${g.id}')">
+          <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copiar link
+        </button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ── NEW GALLERY ──
+function resetNewForm() {
+  document.getElementById('input-name').value = '';
+  document.getElementById('input-date').value = '';
+  document.getElementById('input-location').value = '';
+  document.getElementById('upload-list').innerHTML = '';
+  pendingFiles = [];
+}
+
+function handleFiles(files) {
+  const list = document.getElementById('upload-list');
+  Array.from(files).forEach(file => {
+    const id = Date.now() + Math.random();
+    pendingFiles.push({ id, file });
+    const item = document.createElement('div');
+    item.className = 'upload-item';
+    item.id = `upload-${id}`;
+    item.innerHTML = `
+      <span class="upload-item-name">${file.name}</span>
+      <span class="upload-item-size">${(file.size/1024/1024).toFixed(1)}MB</span>
+      <div class="upload-progress-bar"><div class="upload-progress-fill" id="prog-${id}" style="width:0%"></div></div>
+      <span class="upload-status uploading" id="status-${id}">—</span>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function setProgress(id, pct, done=false, err=false) {
+  const bar = document.getElementById(`prog-${id}`);
+  const status = document.getElementById(`status-${id}`);
+  if(bar) bar.style.width = pct + '%';
+  if(status) {
+    if(done)  { status.textContent = '✓'; status.className = 'upload-status done'; }
+    else if(err) { status.textContent = '✗'; status.className = 'upload-status error'; }
+    else { status.textContent = pct + '%'; }
+  }
+}
+
+async function createGallery() {
+  const name = document.getElementById('input-name').value.trim();
+  if(!name) { toast('Digite o nome do evento', 'error'); return; }
+
+  const date = document.getElementById('input-date').value;
+  const location = document.getElementById('input-location').value.trim();
+  const slug = name.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+
+  toast('Criando galeria...', '');
+
+  // 1. Cria galeria no banco
+  const { data: gallery, error: gErr } = await sb
+    .from('galleries')
+    .insert({ name, slug, date, location, status: 'live' })
+    .select().single();
+
+  if(gErr) { toast('Erro: ' + gErr.message, 'error'); return; }
+
+  // 2. Upload das fotos
+  if(pendingFiles.length > 0) {
+    let pos = 0;
+    for(const {id, file} of pendingFiles) {
+      setProgress(id, 20);
+      const ext = file.name.split('.').pop().toLowerCase();
+      const path = `galleries/${gallery.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+
+      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type });
+      if(upErr) { setProgress(id, 0, false, true); continue; }
+
+      setProgress(id, 70);
+
+      const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(path);
+      const fullUrl = urlData.publicUrl;
+      const { data: thumbData } = sb.storage.from(BUCKET).getPublicUrl(path, { transform: { width: 600, quality: 80, format: 'webp' } });
+      const thumbUrl = thumbData.publicUrl;
+
+      await sb.from('photos').insert({
+        gallery_id: gallery.id, filename: file.name,
+        storage_path: path, thumb_url: thumbUrl,
+        full_url: fullUrl, size_bytes: file.size, position: pos++
+      });
+
+      setProgress(id, 100, true);
+    }
+  }
+
+  toast(`"${name}" criada!`, 'success');
+  setTimeout(() => openDetail(gallery.id), 600);
+}
+
+// ── DETAIL ──
+async function openDetail(id) {
+  const { data: g, error } = await sb
+    .from('galleries')
+    .select('*, photos!photos_gallery_id_fkey(id, filename, storage_path, thumb_url, full_url, position)')
+    .eq('id', id).single();
+
+  if(error || !g) { toast('Erro ao carregar galeria', 'error'); return; }
+
+  currentGalleryId = id;
+  const link = `${BASE_URL}/gallery.html?slug=${g.slug}`;
+
+  document.getElementById('detail-title').textContent = g.name.toUpperCase();
+  document.getElementById('detail-meta').textContent = `${g.date||'—'} · ${g.location||'—'} · ${new Date(g.created_at).toLocaleDateString('pt-BR')}`;
+  document.getElementById('detail-link').textContent = link;
+  g._link = link;
+
+  g.photos?.sort((a,b) => a.position - b.position);
+  renderDetailPhotos(g);
+  goTo('detail');
+  document.getElementById('topbar-title').textContent = g.name.toUpperCase();
+}
+
+function renderDetailPhotos(g) {
+  const grid = document.getElementById('detail-grid');
+  const count = document.getElementById('detail-photo-count');
+  count.textContent = `${g.photos?.length||0} fotos`;
+  grid.innerHTML = '';
+
+  (g.photos||[]).forEach((photo) => {
+    const div = document.createElement('div');
+    div.className = 'detail-photo';
+    div.innerHTML = `
+      <img src="${photo.thumb_url}" alt="${photo.filename}" loading="lazy">
+      <button class="detail-photo-del" onclick="deletePhoto('${photo.id}','${photo.storage_path}')" title="Remover">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+async function addPhotosToDetail(files) {
+  if(!currentGalleryId) return;
+  toast(`Enviando ${files.length} foto(s)...`, '');
+
+  const { data: existing } = await sb.from('photos').select('position').eq('gallery_id', currentGalleryId).order('position', {ascending: false}).limit(1);
+  let pos = (existing?.[0]?.position ?? -1) + 1;
+
+  for(const file of Array.from(files)) {
+    const path = `galleries/${currentGalleryId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+    const { error } = await sb.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type });
+    if(error) continue;
+
+    const { data: u } = sb.storage.from(BUCKET).getPublicUrl(path);
+    const { data: t } = sb.storage.from(BUCKET).getPublicUrl(path, { transform: { width: 600, quality: 80, format: 'webp' } });
+
+    await sb.from('photos').insert({
+      gallery_id: currentGalleryId, filename: file.name,
+      storage_path: path, thumb_url: t.publicUrl,
+      full_url: u.publicUrl, size_bytes: file.size, position: pos++
+    });
+  }
+
+  toast(`${files.length} foto(s) adicionada(s)!`, 'success');
+  openDetail(currentGalleryId);
+}
+
+async function deletePhoto(photoId, storagePath) {
+  await sb.storage.from(BUCKET).remove([storagePath]);
+  await sb.from('photos').delete().eq('id', photoId);
+  openDetail(currentGalleryId);
+}
+
+async function deleteCurrentGallery() {
+  if(!confirm('Excluir esta galeria? O link do cliente deixará de funcionar.')) return;
+  const { data: photos } = await sb.from('photos').select('storage_path').eq('gallery_id', currentGalleryId);
+  if(photos?.length) await sb.storage.from(BUCKET).remove(photos.map(p => p.storage_path));
+  await sb.from('galleries').delete().eq('id', currentGalleryId);
+  toast('Galeria excluída', 'error');
+  goTo('dashboard');
+}
+
+function copyLink() {
+  const link = document.getElementById('detail-link').textContent;
+  navigator.clipboard.writeText(link).then(() => toast('Link copiado!', 'success'));
+}
+
+function copyClientLink(id) {
+  const g = galleries.find(g => g.id === id);
+  if(!g) return;
+  const link = `${BASE_URL}/gallery.html?slug=${g.slug}`;
+  navigator.clipboard.writeText(link).then(() => toast('Link copiado!', 'success'));
+}
+
+function previewGallery() {
+  const g = galleries.find(g => g.id === currentGalleryId);
+  if(!g) return;
+  window.open(`${BASE_URL}/gallery.html?slug=${g.slug}`, '_blank');
+}
+
+// ── DRAG & DROP ──
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+});
+
+// ── TOAST ──
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ` ${type}` : '');
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ── ANALYTICS ──
+let analyticsData   = [];
+let analyticsSortBy = 'views';
+
+async function initAnalyticsScreen() {
+  // Carrega totais globais
+  const { data: allEvents } = await sb.from('photo_events').select('event_type');
+  if (allEvents) {
+    const v = allEvents.filter(e => e.event_type === 'view').length;
+    const l = allEvents.filter(e => e.event_type === 'like').length;
+    const s = allEvents.filter(e => e.event_type === 'save').length;
+    document.getElementById('astat-views').textContent = v;
+    document.getElementById('astat-likes').textContent = l;
+    document.getElementById('astat-saves').textContent = s;
+  }
+  // Popula selector de galerias
+  const sel = document.getElementById('analytics-gallery-select');
+  sel.innerHTML = '<option value="">Selecione uma galeria</option>';
+  galleries.forEach(g => {
+    sel.innerHTML += `<option value="${g.id}">${g.name}</option>`;
+  });
+}
+
+async function loadGalleryAnalytics(galleryId) {
+  const empty = document.getElementById('analytics-empty');
+  const wrap  = document.getElementById('analytics-table-wrap');
+  if (!galleryId) { wrap.style.display = 'none'; empty.style.display = 'block'; return; }
+
+  empty.textContent = 'Carregando...';
+  empty.style.display = 'block';
+  wrap.style.display  = 'none';
+
+  const [{ data: photos }, { data: events }] = await Promise.all([
+    sb.from('photos').select('id, thumb_url, filename, position')
+      .eq('gallery_id', galleryId).order('position'),
+    sb.from('photo_events').select('photo_id, event_type')
+      .eq('gallery_id', galleryId)
+  ]);
+
+  if (!photos?.length) { empty.textContent = 'Nenhuma foto nesta galeria.'; return; }
+
+  // Agrega por foto
+  const stats = {};
+  photos.forEach(p => { stats[p.id] = { photo: p, views: 0, likes: 0, saves: 0 }; });
+  (events || []).forEach(e => {
+    if (stats[e.photo_id]) stats[e.photo_id][e.event_type === 'view' ? 'views' : e.event_type === 'like' ? 'likes' : 'saves']++;
+  });
+
+  analyticsData = Object.values(stats);
+  analyticsSortBy = 'views';
+  renderAnalyticsTable();
+  empty.style.display = 'none';
+  wrap.style.display  = 'block';
+}
+
+function sortAnalytics(by) {
+  analyticsSortBy = by;
+  ['views','likes','saves'].forEach(k =>
+    document.getElementById('sort-' + k).classList.toggle('active', k === by)
+  );
+  renderAnalyticsTable();
+}
+
+function renderAnalyticsTable() {
+  const sorted = [...analyticsData].sort((a,b) => b[analyticsSortBy] - a[analyticsSortBy]);
+  const body = document.getElementById('analytics-table-body');
+  body.innerHTML = '';
+  sorted.forEach(row => {
+    const d = document.createElement('div');
+    d.className = 'atbl-row';
+    d.innerHTML = `
+      <img class="atbl-thumb" src="${row.photo.thumb_url || ''}" loading="lazy" alt="">
+      <div class="atbl-name">${row.photo.filename || '—'}</div>
+      <div class="atbl-num ${analyticsSortBy==='views'?'accent':''}">${row.views}</div>
+      <div class="atbl-num ${analyticsSortBy==='likes'?'accent':''}">${row.likes}</div>
+      <div class="atbl-num ${analyticsSortBy==='saves'?'accent':''}">${row.saves}</div>
+    `;
+    body.appendChild(d);
+  });
+}
+
+// ── SETTINGS ──
+let currentSettingsGalleryId = null;
+
+async function initSettingsScreen() {
+  const sel = document.getElementById('settings-gallery-select');
+  sel.innerHTML = '<option value="">Selecione uma galeria</option>';
+  galleries.forEach(g => {
+    sel.innerHTML += `<option value="${g.id}">${g.name}</option>`;
+  });
+  document.getElementById('settings-form').style.display  = 'none';
+  document.getElementById('settings-empty').style.display = 'block';
+}
+
+async function loadGallerySettings(galleryId) {
+  const form  = document.getElementById('settings-form');
+  const empty = document.getElementById('settings-empty');
+  if (!galleryId) { form.style.display = 'none'; empty.style.display = 'block'; return; }
+
+  currentSettingsGalleryId = galleryId;
+  const { data, error } = await sb.from('galleries').select('*').eq('id', galleryId).single();
+  if (error || !data) { toast('Erro ao carregar galeria', 'error'); return; }
+
+  document.getElementById('set-name').value     = data.name || '';
+  document.getElementById('set-date').value     = data.date || '';
+  document.getElementById('set-location').value = data.location || '';
+  document.getElementById('set-password').value = data.access_password || '';
+  document.getElementById('set-expires').value  = data.expires_at
+    ? data.expires_at.slice(0,16) : '';
+
+  setToggle('set-download', data.download_enabled !== false);
+  setToggle('set-status',   data.status === 'live');
+
+  empty.style.display = 'none';
+  form.style.display  = 'block';
+}
+
+function setToggle(id, on) {
+  const btn = document.getElementById(id);
+  btn.dataset.on = on ? 'true' : 'false';
+}
+
+function toggleDownload() {
+  const btn = document.getElementById('set-download');
+  btn.dataset.on = btn.dataset.on === 'true' ? 'false' : 'true';
+}
+
+function toggleStatus() {
+  const btn = document.getElementById('set-status');
+  btn.dataset.on = btn.dataset.on === 'true' ? 'false' : 'true';
+}
+
+async function saveGallerySettings() {
+  if (!currentSettingsGalleryId) return;
+  const expiresRaw = document.getElementById('set-expires').value;
+  const payload = {
+    name:             document.getElementById('set-name').value.trim(),
+    date:             document.getElementById('set-date').value || null,
+    location:         document.getElementById('set-location').value.trim() || null,
+    access_password:  document.getElementById('set-password').value.trim() || null,
+    expires_at:       expiresRaw ? new Date(expiresRaw).toISOString() : null,
+    download_enabled: document.getElementById('set-download').dataset.on === 'true',
+    status:           document.getElementById('set-status').dataset.on === 'true' ? 'live' : 'draft'
+  };
+  const { error } = await sb.from('galleries').update(payload).eq('id', currentSettingsGalleryId);
+  if (error) { toast('Erro ao salvar: ' + error.message, 'error'); return; }
+  toast('Configurações salvas!', 'success');
+  // Atualiza objeto local
+  const g = galleries.find(g => g.id === currentSettingsGalleryId);
+  if (g) Object.assign(g, payload);
+}
+
+// ── BACKUP ──
+
+function initBackupScreen() {
+  const last = localStorage.getItem('lrp_last_backup');
+  const wrap = document.getElementById('backup-last-wrap');
+  if (last) {
+    wrap.style.display = 'block';
+    document.getElementById('backup-last-label').textContent =
+      'Realizado em ' + new Date(last).toLocaleString('pt-BR');
+  } else {
+    wrap.style.display = 'none';
+  }
+  document.getElementById('backup-progress-wrap').style.display = 'none';
+}
+
+async function fetchAllBackupData() {
+  const { data: galleriesData, error: gErr } = await sb
+    .from('galleries').select('*').order('created_at', { ascending: false });
+  if (gErr) throw gErr;
+
+  const { data: photosData, error: pErr } = await sb
+    .from('photos').select('*').order('gallery_id, position');
+  if (pErr) throw pErr;
+
+  // photo_events paginado — Supabase retorna no máx 1000/request
+  let events = [], from = 0;
+  while (true) {
+    const { data, error } = await sb
+      .from('photo_events').select('*').range(from, from + 999);
+    if (error || !data?.length) break;
+    events = events.concat(data);
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+
+  return {
+    exported_at: new Date().toISOString(),
+    version: '1.0',
+    stats: { galleries: galleriesData.length, photos: photosData.length, events: events.length },
+    galleries: galleriesData,
+    photos: photosData,
+    photo_events: events,
+  };
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+async function backupJSON() {
+  toast('Exportando dados...', '');
+  try {
+    const data = await fetchAllBackupData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    downloadBlob(blob, `lrp-gallery-backup-${new Date().toISOString().slice(0,10)}.json`);
+    localStorage.setItem('lrp_last_backup', new Date().toISOString());
+    toast('JSON exportado!', 'success');
+    initBackupScreen();
+  } catch (err) {
+    toast('Erro: ' + err.message, 'error');
+  }
+}
+
+async function backupZIP() {
+  const btn = document.getElementById('btn-backup-zip');
+  const progressWrap = document.getElementById('backup-progress-wrap');
+  btn.disabled = true;
+  progressWrap.style.display = 'block';
+
+  function setProgress(label, pct) {
+    document.getElementById('backup-progress-label').textContent = label;
+    document.getElementById('backup-progress-pct').textContent = pct + '%';
+    document.getElementById('backup-progress-bar').style.width = pct + '%';
+  }
+
+  try {
+    setProgress('Buscando dados do banco...', 5);
+    const data = await fetchAllBackupData();
+
+    const zip = new JSZip();
+    zip.file('backup.json', JSON.stringify(data, null, 2));
+
+    const gallerySlugMap = {};
+    data.galleries.forEach(g => { gallerySlugMap[g.id] = g.slug || g.id; });
+
+    const photos = data.photos;
+    const total = photos.length;
+
+    if (total === 0) {
+      setProgress('Nenhuma foto encontrada.', 10);
+    } else {
+      let done = 0;
+      const BATCH = 5;
+      for (let i = 0; i < photos.length; i += BATCH) {
+        await Promise.all(photos.slice(i, i + BATCH).map(async (photo) => {
+          try {
+            const res = await fetch(photo.full_url);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const blob = await res.blob();
+            const slug = gallerySlugMap[photo.gallery_id] || photo.gallery_id;
+            const name = photo.filename || photo.storage_path.split('/').pop();
+            zip.folder(`galleries/${slug}`).file(name, blob);
+          } catch (_) { /* foto inacessível — ignora */ }
+          done++;
+          setProgress(`Baixando fotos (${done} de ${total})...`, Math.round(10 + (done / total) * 80));
+        }));
+      }
+    }
+
+    setProgress('Comprimindo ZIP...', 92);
+    const zipBlob = await zip.generateAsync(
+      { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } },
+      (meta) => setProgress('Comprimindo ZIP...', Math.round(92 + meta.percent * 0.08))
+    );
+
+    downloadBlob(zipBlob, `lrp-gallery-backup-${new Date().toISOString().slice(0,10)}.zip`);
+    localStorage.setItem('lrp_last_backup', new Date().toISOString());
+    setProgress('Concluído!', 100);
+    toast('Backup ZIP baixado!', 'success');
+    initBackupScreen();
+  } catch (err) {
+    toast('Erro no backup: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar ZIP completo`;
+  }
+}
+
+// ── INIT ──
+renderDashboard();
+</script>
+
+</body>
+</html>
