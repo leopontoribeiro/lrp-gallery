@@ -689,13 +689,14 @@ let _pendingPwResolve = null; // resolução da promise da senha
 async function init() {
   const slug = new URLSearchParams(window.location.search).get('slug');
 
-  if (slug) {
-    const { data, error } = await sb
-      .from('galleries')
+  // Com slug: carrega a galeria pedida. Sem slug (raiz do site): a galeria live mais recente.
+  {
+    let q = sb.from('galleries')
       .select('*, photos!photos_gallery_id_fkey(id, filename, thumb_url, full_url, position)')
-      .eq('slug', slug)
-      .eq('status', 'live')
-      .single();
+      .eq('status', 'live');
+    q = slug ? q.eq('slug', slug).single()
+             : q.order('created_at', { ascending: false }).limit(1).single();
+    const { data, error } = await q;
 
     if (!error && data) {
       // Verifica expiração
@@ -747,24 +748,6 @@ async function init() {
     } else {
       document.getElementById('coverTitle').textContent = 'GALERIA NÃO ENCONTRADA';
     }
-  } else {
-    // Modo demo — dados locais, sem async
-    PHOTOS = [
-      { id:1, fileId:"1Ok70X2D9C34KNyMfitJ2Xla7H3ZfDmpl", name:"LRP-001.jpg" },
-      { id:2, fileId:"1T4QV7gT-MH4nyjUxTouPPKsOwRwYlODA", name:"LRP-002.jpg" },
-      { id:3, fileId:"1_oP9bzLJlan8WF9NFg0CuYylVlBBl8Fy", name:"LRP-003.jpg" },
-      ...Array.from({length:18}, (_,i) => ({ id:i+4, fileId:null, name:`LRP-${String(i+4).padStart(3,'0')}.jpg` }))
-    ].map((p,i) => ({
-      ...p,
-      thumb: p.fileId
-        ? `https://lh3.googleusercontent.com/d/${p.fileId}=w600`
-        : `https://picsum.photos/${i%2===0?'600/800':'600/450'}?random=${i+20}`,
-      full: p.fileId
-        ? `https://lh3.googleusercontent.com/d/${p.fileId}=w1400`
-        : `https://picsum.photos/1200/800?random=${i+20}`
-    }));
-    document.getElementById('coverTitle').textContent = 'DEMO GALERIA';
-    document.getElementById('cover-img').src = PHOTOS[0].full;
   }
 
   lbPhotos = [...PHOTOS];
