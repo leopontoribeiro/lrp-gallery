@@ -371,10 +371,22 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
 .lb-nav-prev { left: 14px; }
 .lb-nav-next { right: 14px; }
 @media (max-width: 600px) {
-  .lb-nav-btn { width: 34px; height: 34px; }
-  .lb-nav-prev { left: 6px; }
-  .lb-nav-next { right: 6px; }
-  .lb-nav-btn svg { width: 14px; height: 14px; }
+  .lb-nav-btn { width: 44px; height: 44px; }
+  .lb-nav-prev { left: 8px; }
+  .lb-nav-next { right: 8px; }
+  .lb-nav-btn svg { width: 18px; height: 18px; }
+
+  /* Ícones e textos maiores no mobile */
+  .lb-topbar { height: 64px; }
+  .lb-heart svg { width: 28px; height: 28px; }
+  .lb-dl svg { width: 26px; height: 26px; }
+  .lb-menu span { width: 22px; height: 2px; }
+  .lb-filename { font-size: 0.82rem; }
+  .lb-counter  { font-size: 0.74rem; margin-top: 6px; }
+  .bar-heart-btn svg { width: 28px; height: 28px; }
+  .bar-count { font-size: 0.95rem; }
+  .bar-btn { width: 42px; height: 42px; }
+  .bar-btn svg { width: 19px; height: 19px; }
 }
 
 /* ── PHOTO ANIMATIONS ── */
@@ -711,8 +723,12 @@ async function init() {
       coverPhotoId    = data.cover_photo_id || null;
       downloadEnabled = data.download_enabled !== false;
       data.photos?.sort((a, b) => a.position - b.position);
+      // 'lg' = versão otimizada 1600px para o lightbox (carrega ~10x mais rápido que o original)
+      const toLg = u => u.includes('/object/public/')
+        ? u.replace('/object/public/', '/render/image/public/') + '?width=1600&quality=82'
+        : u;
       PHOTOS = (data.photos || []).map(p => ({
-        id: p.id, name: p.filename, thumb: p.thumb_url, full: p.full_url
+        id: p.id, name: p.filename, thumb: p.thumb_url, full: p.full_url, lg: toLg(p.full_url)
       }));
       document.getElementById('coverTitle').textContent = data.name.toUpperCase();
 
@@ -731,7 +747,7 @@ async function init() {
         : PHOTOS[0];
       if (coverPhoto) {
         const coverImg = document.getElementById('cover-img');
-        coverImg.src = coverPhoto.full;
+        coverImg.src = coverPhoto.lg || coverPhoto.full;
         const px = data.cover_position_x ?? 50;
         const py = data.cover_position_y ?? 50;
         coverImg.style.objectPosition = `${px}% ${py}%`;
@@ -1019,22 +1035,23 @@ function closeLightbox() {
 function setLbPhoto(photo, dir) {
   const img = document.getElementById('lbImg');
 
-  // Pré-carrega a próxima foto e só troca quando pronta — sem tela em branco
+  // Abertura instantânea: mostra o thumb (já em cache do grid) e anima na hora
+  img.classList.remove('lb-anim-right', 'lb-anim-left', 'lb-anim-open');
+  img.src = photo.thumb;
+  void img.offsetWidth;          // força reflow para reiniciar animation
+  const cls = dir > 0 ? 'lb-anim-right' : dir < 0 ? 'lb-anim-left' : 'lb-anim-open';
+  img.classList.add(cls);
+  img.addEventListener('animationend', () => img.classList.remove(cls), { once: true });
+
+  // Troca pela versão grande assim que carregar (sem nova animação)
   const pre = new Image();
-  pre.onload = () => {
-    img.classList.remove('lb-anim-right', 'lb-anim-left', 'lb-anim-open');
-    img.src = photo.full;
-    void img.offsetWidth;          // força reflow para reiniciar animation
-    const cls = dir > 0 ? 'lb-anim-right' : dir < 0 ? 'lb-anim-left' : 'lb-anim-open';
-    img.classList.add(cls);
-    img.addEventListener('animationend', () => img.classList.remove(cls), { once: true });
-  };
-  pre.src = photo.full;
+  pre.onload = () => { if (lbPhotos[lbIndex] === photo) img.src = photo.lg; };
+  pre.src = photo.lg;
 
   // Pré-carrega vizinhas para navegação instantânea
   [1, -1].forEach(d => {
     const nb = lbPhotos[(lbIndex + d + lbPhotos.length) % lbPhotos.length];
-    if (nb) new Image().src = nb.full;
+    if (nb) new Image().src = nb.lg;
   });
 
   document.getElementById('lbFilename').textContent = photo.name;
