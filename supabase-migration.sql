@@ -12,6 +12,13 @@ ALTER TABLE galleries
   ADD COLUMN IF NOT EXISTS cover_position_x  float8  DEFAULT 50,
   ADD COLUMN IF NOT EXISTS cover_position_y  float8  DEFAULT 50;
 
+-- 1b. Dimensões (layout justificado) e grupo nomeado por foto
+-- ------------------------------------------------------------
+ALTER TABLE photos
+  ADD COLUMN IF NOT EXISTS width      int,
+  ADD COLUMN IF NOT EXISTS height     int,
+  ADD COLUMN IF NOT EXISTS group_name text;
+
 -- 2. Tabela de eventos de fotos (views, likes, saves)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS photo_events (

@@ -138,17 +138,41 @@ body.bg-dark .bar-btn-primary:hover { background: #d0e838; }
 #grid-section { padding-top: 56px; padding-bottom: 64px; }
 
 /* ── MASONRY (flex colunas — ordem leitura esq→dir) ── */
+/* ── ABAS DE GRUPO (estilo Pixellu) ── */
+#group-tabs {
+  display: flex; align-items: center; justify-content: flex-start;
+  gap: 28px; padding: 18px 24px 14px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  position: sticky; top: 0; z-index: 150;
+  background: var(--bg, #fff); transition: background 0.35s;
+}
+#group-tabs::-webkit-scrollbar { display: none; }
+.group-tab {
+  background: none; border: none; cursor: pointer; white-space: nowrap;
+  font-family: 'Archivo', sans-serif; font-size: 0.78rem; letter-spacing: 0.06em;
+  color: #999; padding: 6px 2px; border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+.group-tab:hover { color: #444; }
+.group-tab.active { color: #1a1a1a; border-bottom-color: #1a1a1a; }
+body.bg-dark .group-tab { color: #777; }
+body.bg-dark .group-tab:hover { color: #ccc; }
+body.bg-dark .group-tab.active { color: #f3f3f3; border-bottom-color: #f3f3f3; }
+@media (max-width: 600px) {
+  #group-tabs { gap: 20px; padding: 14px 16px 10px; justify-content: flex-start; }
+  .group-tab { font-size: 0.86rem; }
+}
+
 /* Layout justificado (estilo Pixellu): linhas de altura igual,
-   larguras proporcionais à foto, preenchendo a largura inteira */
+   larguras exatas calculadas pela proporção de cada foto — sem cortes */
 .masonry {
   display: flex;
   flex-wrap: wrap;
-  align-items: stretch;
+  align-content: flex-start;
   gap: 4px;
   padding: 4px;
   transition: gap 0.25s, padding 0.25s;
 }
-.masonry::after { content: ''; flex-grow: 999999; } /* última linha não estica */
 
 /* Moldura: mat ao redor de cada foto */
 .masonry.size-frame { gap: 20px; padding: 20px; }
@@ -519,6 +543,7 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
 
 <!-- GRID -->
 <div id="grid-section">
+  <nav id="group-tabs" style="display:none"></nav>
   <div class="masonry size-md gap-md" id="masonry"></div>
 </div>
 
@@ -692,7 +717,7 @@ async function init() {
   // Com slug: carrega a galeria pedida. Sem slug (raiz do site): a galeria live mais recente.
   {
     let q = sb.from('galleries')
-      .select('*, photos!photos_gallery_id_fkey(id, filename, thumb_url, full_url, position)')
+      .select('*, photos!photos_gallery_id_fkey(id, filename, thumb_url, full_url, position, width, height, group_name)')
       .eq('status', 'live');
     q = slug ? q.eq('slug', slug).single()
              : q.order('created_at', { ascending: false }).limit(1).single();
@@ -721,8 +746,11 @@ async function init() {
         ? u.replace('/object/public/', '/render/image/public/') + '?width=1600&quality=82'
         : u;
       PHOTOS = (data.photos || []).map(p => ({
-        id: p.id, name: p.filename, thumb: p.thumb_url, full: p.full_url, lg: toLg(p.full_url)
+        id: p.id, name: p.filename, thumb: p.thumb_url, full: p.full_url, lg: toLg(p.full_url),
+        ratio: (p.width && p.height) ? p.width / p.height : null,
+        group: p.group_name || null
       }));
+      buildGroupTabs();
       document.getElementById('coverTitle').textContent = data.name.toUpperCase();
 
       // Oculta botão de download se desabilitado
@@ -778,11 +806,41 @@ function rowHeight() {
   return w < 700 ? Math.round(base * 0.6) : base;
 }
 
+// Calcula linhas justificadas: acumula fotos até encher a largura,
+// então escala a altura da linha para o encaixe exato — zero cortes.
+function layoutJustified() {
+  const grid = document.getElementById('masonry');
+  const cards = [...grid.querySelectorAll('.photo-card')];
+  if (!cards.length) return;
+  const cs   = getComputedStyle(grid);
+  const gap  = parseFloat(cs.columnGap) || 4;
+  const W    = grid.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const R    = rowHeight();
+  const maxH = R * 1.35; // tolerância antes de fechar a linha
+
+  let row = [], sum = 0;
+  const flush = (h) => {
+    row.forEach(o => {
+      o.card.style.height = h + 'px';
+      o.card.style.width  = (o.r * h) + 'px';
+    });
+    row = []; sum = 0;
+  };
+  cards.forEach(card => {
+    const r = parseFloat(card.dataset.ratio) || 1.5;
+    row.push({ card, r }); sum += r;
+    const gaps = (row.length - 1) * gap;
+    const h = (W - gaps) / sum;       // altura para a linha encher exatamente
+    if (h <= maxH) flush(Math.min(h, maxH));
+  });
+  if (row.length) flush(Math.min((W - (row.length - 1) * gap) / sum, R)); // última linha não estica
+}
+
 let revealObs = null;
+let _ratioTimer = null;
 function renderGrid(photos) {
   const grid = document.getElementById('masonry');
   grid.innerHTML = '';
-  const H = rowHeight();
 
   // Reveal animado quando a foto entra na viewport, com stagger
   revealObs?.disconnect();
@@ -801,10 +859,8 @@ function renderGrid(photos) {
     const card = document.createElement('div');
     card.className = 'photo-card' + (liked.has(photo.id) ? ' liked' : '');
     card.dataset.id = photo.id;
-    card.dataset.st = (idx % 6) * 60;          // stagger da animação de entrada
-    card.style.height = H + 'px';
-    card.style.width = (H * 1.45) + 'px';      // chute 3:2 até o thumb informar a proporção real
-    card.style.flexGrow = 145;
+    card.dataset.st = (idx % 6) * 60;                  // stagger da animação de entrada
+    card.dataset.ratio = photo.ratio || '';            // proporção do banco, se houver
     card.innerHTML = `
       <img src="${photo.thumb}"
            loading="${idx < 8 ? 'eager' : 'lazy'}"
@@ -823,17 +879,40 @@ function renderGrid(photos) {
   });
 
   lbPhotos = photos;
+  layoutJustified();
 }
 
-// Ajusta a largura do card pela proporção real da foto (linhas justificadas)
+// Quando o thumb carrega: marca como visível e, se a proporção não veio
+// do banco, usa a real da imagem e re-calcula o layout (debounced)
 function photoCardSized(img) {
   img.classList.add('loaded');
   const card = img.closest('.photo-card');
-  if (!card) return;
-  const r = (img.naturalWidth / img.naturalHeight) || 1.45;
-  const H = parseFloat(card.style.height) || rowHeight();
-  card.style.width = (r * H) + 'px';
-  card.style.flexGrow = Math.round(r * 100);
+  if (!card || card.dataset.ratio) return;
+  card.dataset.ratio = (img.naturalWidth / img.naturalHeight) || 1.5;
+  clearTimeout(_ratioTimer);
+  _ratioTimer = setTimeout(layoutJustified, 60);
+}
+
+// ── GRUPOS ──
+let currentGroup = null; // null = todas
+
+function buildGroupTabs() {
+  const bar = document.getElementById('group-tabs');
+  const groups = [...new Set(PHOTOS.map(p => p.group).filter(Boolean))];
+  if (!groups.length) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  bar.innerHTML = `<button class="group-tab active" onclick="selectGroup(null, this)">Todas as Fotos</button>` +
+    groups.map(g => `<button class="group-tab" onclick="selectGroup('${g.replace(/'/g, "\\'")}', this)">${g}</button>`).join('');
+}
+
+function selectGroup(name, btn) {
+  currentGroup = name;
+  currentView = 'all';
+  document.querySelectorAll('.group-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const subset = name ? PHOTOS.filter(p => p.group === name) : [...PHOTOS];
+  lbPhotos = subset;
+  renderGrid(subset);
 }
 
 // ── GRID SIZE ──
@@ -845,14 +924,14 @@ function setGridSize(size) {
   ['Sm','Md','Lg','Frame'].forEach(s =>
     document.getElementById('btnSize'+s).classList.toggle('active', size === s.toLowerCase())
   );
-  renderGrid(lbPhotos); // re-renderiza com nova contagem de colunas
+  layoutJustified(); // re-calcula linhas com a nova altura
 }
 
 // Atualiza colunas ao redimensionar janela (ex: rotação mobile)
 let _resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(_resizeTimer);
-  _resizeTimer = setTimeout(() => { if (lbPhotos.length) renderGrid(lbPhotos); }, 220);
+  _resizeTimer = setTimeout(() => { if (lbPhotos.length) layoutJustified(); }, 180);
 });
 
 // ── ESPAÇAMENTO ──
@@ -864,6 +943,7 @@ function setGap(gap) {
   ['Sm','Md','Lg'].forEach(s =>
     document.getElementById('btnGap'+s).classList.toggle('active', gap === s.toLowerCase())
   );
+  setTimeout(layoutJustified, 260); // re-calcula após a transição do gap
 }
 
 // ── COR DE FUNDO ──
@@ -993,7 +1073,9 @@ function updateBottomBar() {
 
 // ── VIEWS ──
 function showAll() {
-  currentView = 'all'; lbPhotos = [...PHOTOS]; renderGrid(PHOTOS);
+  currentView = 'all'; currentGroup = null;
+  document.querySelectorAll('.group-tab').forEach((b, i) => b.classList.toggle('active', i === 0));
+  lbPhotos = [...PHOTOS]; renderGrid(PHOTOS);
 }
 function showLiked() {
   const favs = PHOTOS.filter(p => liked.has(p.id));

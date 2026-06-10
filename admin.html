@@ -688,6 +688,23 @@ body {
   filter: brightness(0.7);
 }
 
+/* Modo grupos: seleção e badge */
+.detail-photo.selected { outline: 3px solid var(--accent, #e8ff47); outline-offset: -3px; }
+.detail-photo.selected::after {
+  content: '✓'; position: absolute; top: 6px; left: 6px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent, #e8ff47); color: #111;
+  font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.detail-photo-group {
+  position: absolute; bottom: 6px; left: 6px; max-width: calc(100% - 12px);
+  background: rgba(0,0,0,0.72); color: #e8ff47;
+  font-family: var(--mono); font-size: 0.52rem; letter-spacing: 0.08em;
+  padding: 3px 8px; border-radius: 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  pointer-events: none;
+}
+
 .detail-photo-del {
   position: absolute;
   top: 6px;
@@ -1122,12 +1139,27 @@ body {
         <div class="section-header" style="margin-bottom:12px">
           <span class="section-title" id="detail-photo-count">0 fotos</span>
           <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost" id="btnGroupMode" onclick="toggleGroupMode()">
+              <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              Grupos
+            </button>
             <label class="btn btn-ghost" style="cursor:pointer">
               <input type="file" multiple accept="image/*" style="display:none" onchange="addPhotosToDetail(this.files)">
               <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Adicionar fotos
             </label>
           </div>
+        </div>
+
+        <!-- Barra de grupos (modo seleção) -->
+        <div id="group-bar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px">
+          <span id="group-sel-count" style="font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted)">0 SELECIONADAS</span>
+          <input id="group-name-input" list="group-names" placeholder="Nome do grupo (ex: Cerimônia)"
+                 style="flex:1;min-width:180px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:0.78rem;outline:none">
+          <datalist id="group-names"></datalist>
+          <button class="btn btn-primary" onclick="applyGroup()" style="padding:8px 14px;font-size:0.65rem">Aplicar grupo</button>
+          <button class="btn btn-ghost" onclick="applyGroup(true)" style="padding:8px 14px;font-size:0.65rem">Remover grupo</button>
+          <button class="btn btn-ghost" onclick="toggleGroupMode()" style="padding:8px 14px;font-size:0.65rem">Concluir</button>
         </div>
 
         <div class="detail-grid" id="detail-grid"></div>
@@ -1557,7 +1589,7 @@ async function createGallery() {
 async function openDetail(id) {
   const { data: g, error } = await sb
     .from('galleries')
-    .select('*, photos!photos_gallery_id_fkey(id, filename, storage_path, thumb_url, full_url, position)')
+    .select('*, photos!photos_gallery_id_fkey(id, filename, storage_path, thumb_url, full_url, position, group_name)')
     .eq('id', id).single();
 
   if(error || !g) { toast('Erro ao carregar galeria', 'error'); return; }
@@ -1586,9 +1618,12 @@ function renderDetailPhotos(g) {
   (g.photos||[]).forEach((photo) => {
     const isCover = photo.id === currentGalleryCoverPhotoId;
     const div = document.createElement('div');
-    div.className = 'detail-photo' + (isCover ? ' is-cover' : '');
+    div.className = 'detail-photo' + (isCover ? ' is-cover' : '') +
+                    (groupSelection.has(String(photo.id)) ? ' selected' : '');
+    div.dataset.id = photo.id;
     div.innerHTML = `
       <img src="${photo.thumb_url}" alt="${photo.filename}" loading="lazy">
+      ${photo.group_name ? `<span class="detail-photo-group">${photo.group_name}</span>` : ''}
       <button class="detail-photo-cover" onclick="openCoverEditor('${photo.id}','${photo.full_url}',event)" title="${isCover ? 'Capa atual — clique para reposicionar' : 'Definir como capa'}">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
       </button>
@@ -1596,8 +1631,59 @@ function renderDetailPhotos(g) {
         <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     `;
+    div.addEventListener('click', (e) => {
+      if (!groupMode) return;
+      e.stopPropagation();
+      const key = String(photo.id);
+      if (groupSelection.has(key)) groupSelection.delete(key);
+      else groupSelection.add(key);
+      updateGroupBar();
+    }, true); // captura antes dos botões internos no modo grupos
     grid.appendChild(div);
   });
+
+  // Sugestões de grupos existentes no datalist
+  const names = [...new Set((g.photos||[]).map(p => p.group_name).filter(Boolean))];
+  document.getElementById('group-names').innerHTML = names.map(n => `<option value="${n}">`).join('');
+}
+
+// ── GRUPOS (admin) ──
+let groupMode = false;
+const groupSelection = new Set();
+
+function toggleGroupMode() {
+  groupMode = !groupMode;
+  groupSelection.clear();
+  document.getElementById('group-bar').style.display = groupMode ? 'flex' : 'none';
+  document.getElementById('btnGroupMode').classList.toggle('btn-primary', groupMode);
+  updateGroupBar();
+  if (!groupMode) openDetail(currentGalleryId);
+  else toast('Clique nas fotos para selecionar, depois dê um nome ao grupo', '');
+}
+
+function updateGroupBar() {
+  document.getElementById('group-sel-count').textContent = `${groupSelection.size} SELECIONADAS`;
+  document.querySelectorAll('.detail-photo').forEach(d =>
+    d.classList.toggle('selected', groupSelection.has(d.dataset.id)));
+}
+
+async function applyGroup(remove = false) {
+  if (!groupSelection.size) { toast('Selecione fotos primeiro', 'error'); return; }
+  const name = document.getElementById('group-name-input').value.trim();
+  if (!remove && !name) { toast('Digite o nome do grupo', 'error'); return; }
+  const ids = [...groupSelection];
+  const { error } = await sb.from('photos')
+    .update({ group_name: remove ? null : name })
+    .in('id', ids);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  toast(remove ? `Grupo removido de ${ids.length} foto(s)` : `${ids.length} foto(s) → "${name}"`, 'success');
+  groupSelection.clear();
+  // Recarrega mantendo o modo grupos ativo
+  const { data: g } = await sb.from('galleries')
+    .select('*, photos!photos_gallery_id_fkey(id, filename, storage_path, thumb_url, full_url, position, group_name)')
+    .eq('id', currentGalleryId).single();
+  if (g) { g.photos?.sort((a,b) => a.position - b.position); renderDetailPhotos(g); }
+  updateGroupBar();
 }
 
 async function addPhotosToDetail(files) {
@@ -1615,10 +1701,20 @@ async function addPhotosToDetail(files) {
     const { data: u } = sb.storage.from(BUCKET).getPublicUrl(path);
     const { data: t } = sb.storage.from(BUCKET).getPublicUrl(path, { transform: { width: 600, quality: 80, format: 'webp' } });
 
+    // Dimensões reais — usadas pelo layout justificado da galeria
+    const dims = await new Promise(res => {
+      const url = URL.createObjectURL(file);
+      const im = new Image();
+      im.onload  = () => { URL.revokeObjectURL(url); res({ w: im.naturalWidth, h: im.naturalHeight }); };
+      im.onerror = () => { URL.revokeObjectURL(url); res({ w: null, h: null }); };
+      im.src = url;
+    });
+
     await sb.from('photos').insert({
       gallery_id: currentGalleryId, filename: file.name,
       storage_path: path, thumb_url: t.publicUrl,
-      full_url: u.publicUrl, size_bytes: file.size, position: pos++
+      full_url: u.publicUrl, size_bytes: file.size, position: pos++,
+      width: dims.w, height: dims.h
     });
   }
 
