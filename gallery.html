@@ -138,24 +138,20 @@ body.bg-dark .bar-btn-primary:hover { background: #d0e838; }
 #grid-section { padding-top: 56px; padding-bottom: 64px; }
 
 /* ── MASONRY (flex colunas — ordem leitura esq→dir) ── */
+/* Layout justificado (estilo Pixellu): linhas de altura igual,
+   larguras proporcionais à foto, preenchendo a largura inteira */
 .masonry {
   display: flex;
-  align-items: flex-start;
-  gap: 3px;
-  padding: 3px;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px;
   transition: gap 0.25s, padding 0.25s;
 }
-.masonry-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
+.masonry::after { content: ''; flex-grow: 999999; } /* última linha não estica */
 
 /* Moldura: mat ao redor de cada foto */
 .masonry.size-frame { gap: 20px; padding: 20px; }
-.masonry.size-frame .masonry-col { gap: 20px; }
 .masonry.size-frame .photo-card {
   padding: 18px 18px 36px;
   background: var(--bg);
@@ -174,32 +170,28 @@ body.bg-dark .masonry.size-frame .photo-card {
 .masonry.size-frame.gap-sm,
 .masonry.size-frame.gap-md,
 .masonry.size-frame.gap-lg { gap: 20px; padding: 20px; }
-.masonry.size-frame.gap-sm .masonry-col,
-.masonry.size-frame.gap-md .masonry-col,
-.masonry.size-frame.gap-lg .masonry-col { gap: 20px; }
 .masonry.size-frame.gap-sm .photo-card,
 .masonry.size-frame.gap-md .photo-card,
 .masonry.size-frame.gap-lg .photo-card { border-radius: 0 !important; }
 
 /* ── ESPAÇAMENTO ── */
-.masonry.gap-sm { gap: 1px; padding: 1px; }
-.masonry.gap-sm .masonry-col { gap: 1px; }
-
-.masonry.gap-md { gap: 3px; padding: 3px; }
-.masonry.gap-md .masonry-col { gap: 3px; }
-
-.masonry.gap-lg { gap: 10px; padding: 10px; }
-.masonry.gap-lg .masonry-col { gap: 10px; }
+.masonry.gap-sm { gap: 2px; padding: 2px; }
+.masonry.gap-md { gap: 4px; padding: 4px; }
+.masonry.gap-lg { gap: 14px; padding: 14px; }
 .masonry.gap-lg .photo-card { border-radius: 6px; }
 
 /* ── PHOTO CARD ── */
 .photo-card {
-  position: relative; overflow: hidden;
+  position: relative; overflow: hidden; box-sizing: border-box;
   cursor: pointer; background: #e8e8e8; display: block;
-  transition: border-radius 0.2s, background 0.35s, box-shadow 0.2s;
+  /* Reveal no scroll (estilo Pixellu) */
+  opacity: 0; transform: translateY(26px);
+  transition: opacity 0.65s ease, transform 0.65s cubic-bezier(0.22,0.61,0.36,1),
+              border-radius 0.2s, background 0.35s, box-shadow 0.2s;
 }
+.photo-card.in { opacity: 1; transform: none; }
 .photo-card img {
-  width: 100%; display: block;
+  width: 100%; height: 100%; object-fit: cover; display: block;
   opacity: 0;
   transition: opacity 0.35s ease, transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94);
 }
@@ -796,43 +788,46 @@ function scrollToGrid() {
   document.getElementById('grid-section').scrollIntoView({ behavior: 'smooth' });
 }
 
-// ── RENDER ──
-function getNumCols() {
+// ── RENDER (layout justificado estilo Pixellu) ──
+function rowHeight() {
   const w = window.innerWidth;
-  switch (gridSize) {
-    case 'sm':    return w >= 1100 ? 7 : w >= 700 ? 5 : 3;
-    case 'md':    return w >= 1100 ? 4 : w >= 700 ? 3 : 2;
-    case 'lg':    return w >= 1100 ? 3 : w >= 700 ? 2 : 1;
-    case 'frame': return w >= 1000 ? 3 : w >= 600 ? 2 : 1;
-    default:      return 2;
-  }
+  const base = { sm: 170, md: 280, lg: 430, frame: 330 }[gridSize] || 280;
+  return w < 700 ? Math.round(base * 0.6) : base;
 }
 
+let revealObs = null;
 function renderGrid(photos) {
   const grid = document.getElementById('masonry');
   grid.innerHTML = '';
-  const n = getNumCols();
+  const H = rowHeight();
 
-  // Cria N colunas flex
-  const cols = Array.from({length: n}, () => {
-    const col = document.createElement('div');
-    col.className = 'masonry-col';
-    grid.appendChild(col);
-    return col;
-  });
+  // Reveal animado quando a foto entra na viewport, com stagger
+  revealObs?.disconnect();
+  revealObs = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      const el = en.target;
+      el.style.transitionDelay = (el.dataset.st || 0) + 'ms';
+      el.classList.add('in');
+      el.addEventListener('transitionend', () => { el.style.transitionDelay = '0ms'; }, { once: true });
+      revealObs.unobserve(el);
+    });
+  }, { rootMargin: '0px 0px 80px 0px', threshold: 0.05 });
 
-  // Distribui fotos da esquerda para direita (idx % n),
-  // mantendo ordem cronológica na leitura visual
   photos.forEach((photo, idx) => {
     const card = document.createElement('div');
     card.className = 'photo-card' + (liked.has(photo.id) ? ' liked' : '');
     card.dataset.id = photo.id;
+    card.dataset.st = (idx % 6) * 60;          // stagger da animação de entrada
+    card.style.height = H + 'px';
+    card.style.width = (H * 1.45) + 'px';      // chute 3:2 até o thumb informar a proporção real
+    card.style.flexGrow = 145;
     card.innerHTML = `
       <img src="${photo.thumb}"
            loading="${idx < 8 ? 'eager' : 'lazy'}"
            decoding="async"
            alt="${photo.name}"
-           onload="this.classList.add('loaded')"
+           onload="photoCardSized(this)"
            onclick="openLightbox(${idx}, event)">
       <button class="card-heart" onclick="toggleLike(event,${photo.id},this)" title="Favoritar">
         <svg viewBox="0 0 24 24" stroke-width="1.8">
@@ -840,10 +835,22 @@ function renderGrid(photos) {
         </svg>
       </button>
     `;
-    cols[idx % n].appendChild(card);
+    grid.appendChild(card);
+    revealObs.observe(card);
   });
 
   lbPhotos = photos;
+}
+
+// Ajusta a largura do card pela proporção real da foto (linhas justificadas)
+function photoCardSized(img) {
+  img.classList.add('loaded');
+  const card = img.closest('.photo-card');
+  if (!card) return;
+  const r = (img.naturalWidth / img.naturalHeight) || 1.45;
+  const H = parseFloat(card.style.height) || rowHeight();
+  card.style.width = (r * H) + 'px';
+  card.style.flexGrow = Math.round(r * 100);
 }
 
 // ── GRID SIZE ──
