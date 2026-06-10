@@ -913,6 +913,7 @@ function selectGroup(name, btn) {
   const subset = name ? PHOTOS.filter(p => p.group === name) : [...PHOTOS];
   lbPhotos = subset;
   renderGrid(subset);
+  document.getElementById('grid-section').scrollIntoView();
 }
 
 // ── GRID SIZE ──
