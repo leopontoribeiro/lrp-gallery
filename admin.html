@@ -1434,11 +1434,13 @@ async function renderDashboard() {
   grid.innerHTML = '';
 
   galleries.forEach(g => {
-    const thumb = g.photos?.[0]?.thumb_url || `https://picsum.photos/400/225?random=${g.id}`;
+    const coverPhoto = g.photos?.find(p => p.id === g.cover_photo_id) || g.photos?.[0];
+    const thumb = coverPhoto?.thumb_url || `https://picsum.photos/400/225?random=${g.id}`;
+    const coverPos = `${g.cover_position_x ?? 50}% ${g.cover_position_y ?? 50}%`;
     const card = document.createElement('div');
     card.className = 'gallery-card';
     card.innerHTML = `
-      <img class="gallery-card-thumb" src="${thumb}" alt="${g.name}" loading="lazy">
+      <img class="gallery-card-thumb" src="${thumb}" alt="${g.name}" loading="lazy" style="object-position:${coverPos}">
       <div class="gallery-card-body">
         <div class="gallery-card-name">${g.name}</div>
         <div class="gallery-card-meta">

@@ -1019,18 +1019,23 @@ function closeLightbox() {
 function setLbPhoto(photo, dir) {
   const img = document.getElementById('lbImg');
 
-  // Remove animações anteriores e oculta instantaneamente
-  img.classList.remove('lb-anim-right', 'lb-anim-left', 'lb-anim-open');
-  img.style.opacity = '0';
-
-  setTimeout(() => {
+  // Pré-carrega a próxima foto e só troca quando pronta — sem tela em branco
+  const pre = new Image();
+  pre.onload = () => {
+    img.classList.remove('lb-anim-right', 'lb-anim-left', 'lb-anim-open');
     img.src = photo.full;
-    img.style.opacity = '';        // devolve controle ao CSS/animation
     void img.offsetWidth;          // força reflow para reiniciar animation
     const cls = dir > 0 ? 'lb-anim-right' : dir < 0 ? 'lb-anim-left' : 'lb-anim-open';
     img.classList.add(cls);
     img.addEventListener('animationend', () => img.classList.remove(cls), { once: true });
-  }, 80);
+  };
+  pre.src = photo.full;
+
+  // Pré-carrega vizinhas para navegação instantânea
+  [1, -1].forEach(d => {
+    const nb = lbPhotos[(lbIndex + d + lbPhotos.length) % lbPhotos.length];
+    if (nb) new Image().src = nb.full;
+  });
 
   document.getElementById('lbFilename').textContent = photo.name;
   document.getElementById('lbCoverBtn').classList.toggle('is-cover', photo.id === coverPhotoId);
