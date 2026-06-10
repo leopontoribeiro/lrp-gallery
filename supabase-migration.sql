@@ -6,9 +6,11 @@
 -- 1. Colunas extras na tabela galleries
 -- ------------------------------------------------------------
 ALTER TABLE galleries
-  ADD COLUMN IF NOT EXISTS expires_at       timestamptz,
-  ADD COLUMN IF NOT EXISTS download_enabled boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS access_password  text;
+  ADD COLUMN IF NOT EXISTS expires_at        timestamptz,
+  ADD COLUMN IF NOT EXISTS download_enabled  boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS access_password   text,
+  ADD COLUMN IF NOT EXISTS cover_position_x  float8  DEFAULT 50,
+  ADD COLUMN IF NOT EXISTS cover_position_y  float8  DEFAULT 50;
 
 -- 2. Tabela de eventos de fotos (views, likes, saves)
 -- ------------------------------------------------------------

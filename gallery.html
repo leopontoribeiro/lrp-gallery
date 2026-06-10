@@ -729,7 +729,13 @@ async function init() {
       const coverPhoto = coverPhotoId
         ? (PHOTOS.find(p => p.id === coverPhotoId) || PHOTOS[0])
         : PHOTOS[0];
-      if (coverPhoto) document.getElementById('cover-img').src = coverPhoto.full;
+      if (coverPhoto) {
+        const coverImg = document.getElementById('cover-img');
+        coverImg.src = coverPhoto.full;
+        const px = data.cover_position_x ?? 50;
+        const py = data.cover_position_y ?? 50;
+        coverImg.style.objectPosition = `${px}% ${py}%`;
+      }
     } else {
       document.getElementById('coverTitle').textContent = 'GALERIA NÃO ENCONTRADA';
     }
