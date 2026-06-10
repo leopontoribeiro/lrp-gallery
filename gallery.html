@@ -304,66 +304,97 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
 #lightbox {
   position: fixed; inset: 0; z-index: 500;
   background: #f5f5f5; display: flex; flex-direction: column;
-  opacity: 0; pointer-events: none; transition: opacity 0.22s;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s;
 }
 #lightbox.open { opacity: 1; pointer-events: all; }
 
 .lb-topbar {
   height: 56px; display: flex; align-items: center; justify-content: space-between;
-  padding: 0 18px; background: #fff; border-bottom: 1px solid #efefef; flex-shrink: 0;
+  padding: 0 14px 0 10px; background: #fff; border-bottom: 1px solid #efefef; flex-shrink: 0;
 }
 .lb-back {
-  background: none; border: none; cursor: pointer; padding: 6px; line-height: 0; color: #555;
+  background: none; border: none; cursor: pointer; padding: 8px; line-height: 0; color: #555;
+  -webkit-tap-highlight-color: transparent;
 }
 .lb-back svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.6; }
 .lb-back:hover { color: #1a1a1a; }
-.lb-menu { background: none; border: none; cursor: pointer; padding: 6px; display: flex; flex-direction: column; gap: 4px; }
-.lb-menu span { display: block; width: 20px; height: 1.5px; background: #888; }
 
-.lb-img-area {
-  flex: 1; display: flex; align-items: center; justify-content: center;
-  overflow: hidden; padding: 16px;
-}
-.lb-img-area img {
-  max-width: 100%; max-height: 100%; object-fit: contain;
-  display: block; transition: opacity 0.18s;
-}
-
-.lb-bottombar {
-  background: #fff; border-top: 1px solid #efefef;
-  padding: 10px 20px 16px; flex-shrink: 0;
-}
-.lb-filename { font-size: 0.68rem; color: #aaa; text-align: center; margin-bottom: 12px; letter-spacing: 0.02em; }
-
-.lb-actions {
-  display: flex; align-items: center; justify-content: center; gap: 22px;
-}
+.lb-topbar-right { display: flex; align-items: center; gap: 2px; }
 
 .lb-heart {
   background: none; border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; padding: 8px; line-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 9px; line-height: 0;
   transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1);
+  -webkit-tap-highlight-color: transparent;
 }
-.lb-heart:active { transform: scale(0.88); }
-.lb-heart svg { width: 26px; height: 26px; stroke: #ccc; fill: none; stroke-width: 1.6; transition: all 0.18s; }
+.lb-heart:active { transform: scale(0.85); }
+.lb-heart svg { width: 22px; height: 22px; stroke: #bbb; fill: none; stroke-width: 1.6; transition: all 0.18s; }
 .lb-heart.liked svg { stroke: #e04444; fill: #e04444; }
-
-.lb-cover-btn {
-  background: none; border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; padding: 8px; line-height: 0;
-}
-.lb-cover-btn svg { width: 22px; height: 22px; stroke: #ccc; fill: none; stroke-width: 1.6; transition: all 0.18s; }
-.lb-cover-btn:hover svg { stroke: #888; }
-.lb-cover-btn.is-cover svg { stroke: #e8c744; fill: #e8c744; }
 
 .lb-dl {
   background: none; border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; padding: 8px; line-height: 0;
+  display: flex; align-items: center; justify-content: center; padding: 9px; line-height: 0;
+  -webkit-tap-highlight-color: transparent;
 }
-.lb-dl svg { width: 24px; height: 24px; stroke: #888; fill: none; stroke-width: 1.6; transition: stroke 0.15s; }
-.lb-dl:hover svg { stroke: #1a1a1a; }
+.lb-dl svg { width: 20px; height: 20px; stroke: #bbb; fill: none; stroke-width: 1.6; transition: stroke 0.15s; }
+.lb-dl:hover svg { stroke: #333; }
 
-.lb-counter { font-size: 0.65rem; color: #ccc; text-align: center; margin-top: 4px; }
+.lb-menu { background: none; border: none; cursor: pointer; padding: 9px; display: flex; flex-direction: column; gap: 4px; -webkit-tap-highlight-color: transparent; }
+.lb-menu span { display: block; width: 18px; height: 1.5px; background: #aaa; border-radius: 2px; }
+
+/* Image area with side nav */
+.lb-img-area {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  overflow: hidden; padding: 16px; position: relative;
+}
+.lb-img-area img {
+  max-width: 100%; max-height: 100%; object-fit: contain;
+  display: block; user-select: none; -webkit-user-drag: none;
+}
+
+/* ── SIDE NAV ARROWS ── */
+.lb-nav-btn {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 46px; height: 46px; border-radius: 50%;
+  background: rgba(255,255,255,0.92);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.13);
+  transition: background 0.15s, opacity 0.18s;
+  z-index: 10; opacity: 0.72;
+  -webkit-tap-highlight-color: transparent;
+}
+.lb-nav-btn:hover  { background: #fff; opacity: 1; }
+.lb-nav-btn:active { opacity: 0.5; }
+.lb-nav-btn svg { width: 18px; height: 18px; stroke: #333; fill: none; stroke-width: 2; }
+.lb-nav-prev { left: 14px; }
+.lb-nav-next { right: 14px; }
+@media (max-width: 600px) {
+  .lb-nav-btn { width: 34px; height: 34px; }
+  .lb-nav-prev { left: 6px; }
+  .lb-nav-next { right: 6px; }
+  .lb-nav-btn svg { width: 14px; height: 14px; }
+}
+
+/* ── PHOTO ANIMATIONS ── */
+@keyframes lbSlideInRight { from { opacity:0; transform:translateX(36px) scale(0.97); } to { opacity:1; transform:none; } }
+@keyframes lbSlideInLeft  { from { opacity:0; transform:translateX(-36px) scale(0.97); } to { opacity:1; transform:none; } }
+@keyframes lbFadeIn       { from { opacity:0; transform:scale(0.96); } to { opacity:1; transform:none; } }
+.lb-anim-right { animation: lbSlideInRight 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+.lb-anim-left  { animation: lbSlideInLeft  0.28s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+.lb-anim-open  { animation: lbFadeIn       0.30s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+
+.lb-bottombar {
+  background: #fff; border-top: 1px solid #efefef;
+  padding: 10px 20px 14px; flex-shrink: 0;
+}
+.lb-filename { font-size: 0.68rem; color: #aaa; text-align: center; letter-spacing: 0.02em; }
+.lb-counter  { font-size: 0.6rem; color: #ccc; text-align: center; margin-top: 4px; }
+
+/* hidden cover btn — kept in DOM for JS */
+.lb-cover-btn { display: none; }
+.lb-cover-btn.is-cover { display: flex; }
 
 /* ── DRAWER ── */
 #drawer { position: fixed; inset: 0; z-index: 900; pointer-events: none; }
@@ -562,28 +593,32 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
     <button class="lb-back" onclick="closeLightbox()">
       <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
-    <button class="lb-menu" onclick="openDrawer()"><span></span><span></span></button>
-  </div>
-  <div class="lb-img-area" id="lbImgArea">
-    <img id="lbImg" src="" alt="" crossorigin="anonymous">
-  </div>
-  <div class="lb-bottombar">
-    <div class="lb-filename" id="lbFilename">—</div>
-    <div class="lb-actions">
-      <!-- Favoritar -->
-      <button class="lb-heart" id="lbHeart" onclick="toggleLikeLb()">
+    <div class="lb-topbar-right">
+      <button class="lb-heart" id="lbHeart" onclick="toggleLikeLb()" title="Favoritar">
         <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
       </button>
-      <!-- Definir como capa -->
-      <button class="lb-cover-btn" id="lbCoverBtn" onclick="setCoverPhoto()" title="Definir como capa do álbum">
-        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      </button>
-      <!-- Baixar esta foto -->
       <button class="lb-dl" onclick="downloadCurrent()" title="Baixar esta foto">
         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       </button>
+      <button class="lb-menu" onclick="openDrawer()"><span></span><span></span></button>
     </div>
+  </div>
+  <div class="lb-img-area" id="lbImgArea">
+    <button class="lb-nav-btn lb-nav-prev" onclick="lbNav(-1)" aria-label="Foto anterior">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <img id="lbImg" src="" alt="" crossorigin="anonymous">
+    <button class="lb-nav-btn lb-nav-next" onclick="lbNav(1)" aria-label="Próxima foto">
+      <svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+  </div>
+  <div class="lb-bottombar">
+    <div class="lb-filename" id="lbFilename">—</div>
     <div class="lb-counter" id="lbCounter">1 / 1</div>
+    <!-- capa: oculto no visual, mantido para JS -->
+    <button class="lb-cover-btn" id="lbCoverBtn" onclick="setCoverPhoto()" title="Definir como capa">
+      <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </button>
   </div>
 </div>
 
@@ -963,40 +998,59 @@ function openLikedView() {
 function openLightbox(idx, e) {
   if (e) e.stopPropagation();
   lbIndex = idx;
-  setLbPhoto(lbPhotos[idx]);
+  setLbPhoto(lbPhotos[idx], 0);
   document.getElementById('lbCounter').textContent = `${idx+1} / ${lbPhotos.length}`;
   document.getElementById('lightbox').classList.add('open');
   document.addEventListener('keydown', lbKey);
   trackEvent('view', lbPhotos[idx].id);
 }
+
 function closeLightbox() {
   document.getElementById('lightbox').classList.remove('open');
   document.removeEventListener('keydown', lbKey);
 }
-function setLbPhoto(photo) {
+
+function setLbPhoto(photo, dir) {
   const img = document.getElementById('lbImg');
+
+  // Remove animações anteriores e oculta instantaneamente
+  img.classList.remove('lb-anim-right', 'lb-anim-left', 'lb-anim-open');
   img.style.opacity = '0';
-  setTimeout(() => { img.src = photo.full; img.style.opacity = '1'; }, 120);
+
+  setTimeout(() => {
+    img.src = photo.full;
+    img.style.opacity = '';        // devolve controle ao CSS/animation
+    void img.offsetWidth;          // força reflow para reiniciar animation
+    const cls = dir > 0 ? 'lb-anim-right' : dir < 0 ? 'lb-anim-left' : 'lb-anim-open';
+    img.classList.add(cls);
+    img.addEventListener('animationend', () => img.classList.remove(cls), { once: true });
+  }, 80);
+
   document.getElementById('lbFilename').textContent = photo.name;
   document.getElementById('lbCoverBtn').classList.toggle('is-cover', photo.id === coverPhotoId);
   updateLbHeart();
 }
+
 function lbNav(dir) {
   lbIndex = (lbIndex + dir + lbPhotos.length) % lbPhotos.length;
-  setLbPhoto(lbPhotos[lbIndex]);
+  setLbPhoto(lbPhotos[lbIndex], dir);
   document.getElementById('lbCounter').textContent = `${lbIndex+1} / ${lbPhotos.length}`;
-}
-function lbKey(e) {
-  if (e.key==='ArrowRight') lbNav(1);
-  if (e.key==='ArrowLeft')  lbNav(-1);
-  if (e.key==='Escape')     closeLightbox();
+  trackEvent('view', lbPhotos[lbIndex].id);
 }
 
-// Swipe mobile
+function lbKey(e) {
+  if (e.key === 'ArrowRight') lbNav(1);
+  if (e.key === 'ArrowLeft')  lbNav(-1);
+  if (e.key === 'Escape')     closeLightbox();
+}
+
+// Swipe mobile — ignora toques nas setas laterais
 document.getElementById('lbImgArea').addEventListener('touchstart',
-  e => { touchStartX = e.changedTouches[0].clientX; }, {passive:true});
-document.getElementById('lbImgArea').addEventListener('touchend',
-  e => { const dx = e.changedTouches[0].clientX - touchStartX; if (Math.abs(dx) > 50) lbNav(dx < 0 ? 1 : -1); }, {passive:true});
+  e => { touchStartX = e.changedTouches[0].clientX; }, { passive: true });
+document.getElementById('lbImgArea').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 48) lbNav(dx < 0 ? 1 : -1);
+}, { passive: true });
 
 // ── DOWNLOAD ──
 function downloadCurrent() {
