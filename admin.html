@@ -1699,7 +1699,7 @@ async function addPhotosToDetail(files) {
     if(error) continue;
 
     const { data: u } = sb.storage.from(BUCKET).getPublicUrl(path);
-    const { data: t } = sb.storage.from(BUCKET).getPublicUrl(path, { transform: { width: 600, quality: 80, format: 'webp' } });
+    const { data: t } = sb.storage.from(BUCKET).getPublicUrl(path, { transform: { width: 800, height: 800, resize: 'contain', quality: 80, format: 'webp' } });
 
     // Dimensões reais — usadas pelo layout justificado da galeria
     const dims = await new Promise(res => {

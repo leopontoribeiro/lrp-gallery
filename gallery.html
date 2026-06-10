@@ -742,11 +742,16 @@ async function init() {
       downloadEnabled = data.download_enabled !== false;
       data.photos?.sort((a, b) => a.position - b.position);
       // 'lg' = versão otimizada 1600px para o lightbox (carrega ~10x mais rápido que o original)
+      // IMPORTANTE: sempre width+height+resize=contain — só width distorce a imagem no Supabase
       const toLg = u => u.includes('/object/public/')
-        ? u.replace('/object/public/', '/render/image/public/') + '?width=1600&quality=82'
+        ? u.replace('/object/public/', '/render/image/public/') + '?width=1600&height=1600&resize=contain&quality=82'
+        : u;
+      // Normaliza thumbs antigos que foram gerados só com width (vinham esticados na vertical)
+      const toThumb = u => u.includes('/render/image/')
+        ? u.split('?')[0] + '?width=800&height=800&resize=contain&quality=80&format=webp'
         : u;
       PHOTOS = (data.photos || []).map(p => ({
-        id: p.id, name: p.filename, thumb: p.thumb_url, full: p.full_url, lg: toLg(p.full_url),
+        id: p.id, name: p.filename, thumb: toThumb(p.thumb_url), full: p.full_url, lg: toLg(p.full_url),
         ratio: (p.width && p.height) ? p.width / p.height : null,
         group: p.group_name || null
       }));

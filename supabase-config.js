@@ -208,12 +208,14 @@ async function photoUpload(file, galleryId, position = 0, onProgress = null) {
   const fullUrl = urlData.publicUrl;
 
   // URL de thumbnail via Supabase Image Transformation
-  // Redimensiona para 600px de largura automaticamente
+  // IMPORTANTE: width+height+resize=contain — só width distorce a imagem
   const { data: thumbData } = sb.storage
     .from(STORAGE_BUCKET)
     .getPublicUrl(path, {
       transform: {
-        width: 600,
+        width: 800,
+        height: 800,
+        resize: 'contain',
         quality: 80,
         format: 'webp',
       }
