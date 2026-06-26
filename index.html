@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Souleandro Ribeiro — Criativo & Desenvolvedor</title>
+<meta property="og:type" content="website">
+<meta property="og:title" content="Souleandro Ribeiro">
+<meta property="og:description" content="Portfólio de projetos: Gallery, Origon e Mateu Coffee">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Archivo', sans-serif;
+    background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+    color: #f0ece6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    text-align: center;
+    padding: 60px 24px 40px;
+  }
+
+  header h1 {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 2.5rem;
+    letter-spacing: 0.02em;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #e8ff47 0%, #47ffb2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  header p {
+    font-size: 0.95rem;
+    color: #999;
+    letter-spacing: 0.03em;
+    font-weight: 500;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .services {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 28px;
+    margin-top: 40px;
+  }
+
+  .service-card {
+    background: linear-gradient(135deg, #141414 0%, #1a1a1a 100%);
+    border: 1px solid #2e2e2e;
+    border-radius: 12px;
+    padding: 36px 28px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .service-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(232, 255, 71, 0.1), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .service-card:hover {
+    border-color: #e8ff47;
+    background: linear-gradient(135deg, #1a1a1a 0%, #252525 100%);
+    transform: translateY(-4px);
+  }
+
+  .service-card:hover::before {
+    left: 100%;
+  }
+
+  .service-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+  }
+
+  .service-name {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: 0.02em;
+  }
+
+  .service-description {
+    font-size: 0.9rem;
+    color: #999;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    flex: 1;
+  }
+
+  .service-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #e8ff47;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: gap 0.3s ease;
+  }
+
+  .service-card:hover .service-link {
+    gap: 12px;
+  }
+
+  .service-link::after {
+    content: '→';
+    transition: transform 0.3s ease;
+  }
+
+  .service-card:hover .service-link::after {
+    transform: translateX(2px);
+  }
+
+  footer {
+    text-align: center;
+    padding: 40px 24px;
+    border-top: 1px solid #2e2e2e;
+    color: #666;
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 768px) {
+    header h1 {
+      font-size: 1.8rem;
+    }
+
+    .services {
+      grid-template-columns: 1fr;
+    }
+
+    .service-card {
+      padding: 28px 24px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Souleandro Ribeiro</h1>
+  <p>Criativo • Desenvolvedor • Empreendedor</p>
+</header>
+
+<div class="container">
+  <div class="services">
+
+    <a href="https://mateucoffee.souleandroribeiro.com.br" class="service-card">
+      <div class="service-icon">☕</div>
+      <div class="service-name">Mateu Coffee</div>
+      <div class="service-description">Plataforma de gestão e promoção para cafeterias. Sistema de ofertas dinâmicas, fidelização de clientes e analytics.</div>
+      <div class="service-link">Acessar</div>
+    </a>
+
+    <a href="https://origon.souleandroribeiro.com.br" class="service-card">
+      <div class="service-icon">📊</div>
+      <div class="service-name">Origon App</div>
+      <div class="service-description">Sistema operacional financeiro para criativos e freelancers. Gestão de projetos, propostas, custos e lucro real.</div>
+      <div class="service-link">Acessar</div>
+    </a>
+
+    <a href="albums.html" class="service-card">
+      <div class="service-icon">📸</div>
+      <div class="service-name">Gallery</div>
+      <div class="service-description">Galeria de fotos organizada por álbuns. Portfólio visual de trabalhos, eventos e projetos fotográficos.</div>
+      <div class="service-link">Acessar</div>
+    </a>
+
+  </div>
+</div>
+
+<footer>
+  <p>&copy; 2026 Souleandro Ribeiro. Todos os direitos reservados.</p>
+</footer>
+
+</body>
+</html>
