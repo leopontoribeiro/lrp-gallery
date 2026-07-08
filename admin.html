@@ -921,7 +921,7 @@ body {
 .toggle-btn[data-on="true"] .toggle-thumb { transform: translateX(18px); }
 
 /* ── TOAST ── */
-#toast {
+#toast-box {
   position: fixed;
   bottom: 24px;
   left: 50%;
@@ -941,9 +941,46 @@ body {
   white-space: nowrap;
 }
 
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-#toast.success { border-color: var(--green); color: var(--green); }
-#toast.error   { border-color: var(--red);   color: var(--red); }
+#toast-box.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast-box.success { border-color: var(--green); color: var(--green); }
+#toast-box.error   { border-color: var(--red);   color: var(--red); }
+
+/* ── CONFIRM MODAL ── */
+#confirm-modal {
+  position: fixed; inset: 0; z-index: 9998;
+  background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+}
+#confirm-modal.open { display: flex; }
+#confirm-box {
+  background: var(--panel); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 28px 32px; max-width: 380px; width: 90%;
+  text-align: center;
+}
+#confirm-title {
+  font-family: var(--display); font-size: 1.1rem; font-weight: 700;
+  letter-spacing: 0.04em; color: var(--text); margin-bottom: 10px;
+}
+#confirm-msg { font-size: 0.78rem; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
+#confirm-actions { display: flex; gap: 10px; justify-content: center; }
+
+/* ── MFA MODAL (mesmo visual do confirm-modal) ── */
+#mfa-modal {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+}
+#mfa-modal.open { display: flex; }
+#mfa-modal-box {
+  background: var(--panel); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 28px 32px; max-width: 320px; width: 90%;
+  text-align: center;
+}
+#mfa-modal-title {
+  font-family: var(--display); font-size: 1.1rem; font-weight: 700;
+  letter-spacing: 0.04em; color: var(--text); margin-bottom: 10px;
+}
+#mfa-modal-msg { font-size: 0.78rem; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
 
 /* ── MOBILE TOPBAR ── */
 .mobile-menu-btn {
@@ -964,7 +1001,28 @@ body {
 </head>
 <body>
 
-<div id="app">
+<!-- LOGIN GATE -->
+<div id="login-gate" style="display:flex;position:fixed;inset:0;z-index:9999;background:#0d0d0d;align-items:center;justify-content:center;flex-direction:column">
+  <div style="width:100%;max-width:340px;padding:0 20px">
+    <h1 style="font-family:var(--display);font-size:1.6rem;text-align:center;margin-bottom:8px;letter-spacing:0.05em">ADMIN</h1>
+    <p style="text-align:center;color:var(--muted);font-size:0.8rem;margin-bottom:32px">@eusouleandroribeiro</p>
+    <input type="email" id="login-email" placeholder="E-mail" style="width:100%;padding:12px 16px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.9rem;margin-bottom:12px;outline:none" onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
+    <input type="password" id="login-password" placeholder="Senha" style="width:100%;padding:12px 16px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.9rem;margin-bottom:12px;outline:none" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()" style="width:100%;padding:12px;background:var(--accent);color:#0d0d0d;border:none;border-radius:8px;font-weight:600;font-size:0.9rem;cursor:pointer">Entrar</button>
+    <div style="display:flex;align-items:center;gap:12px;margin:20px 0 16px">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="color:var(--muted);font-size:0.75rem;letter-spacing:0.05em">ou</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+    <button onclick="doGoogleLogin()" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text);font-weight:500;font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.99 23.99 0 0 0 0 24c0 3.77.9 7.35 2.56 10.53l7.97-5.94z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 5.94C6.51 42.62 14.62 48 24 48z"/></svg>
+      Entrar com Google
+    </button>
+    <p id="login-error" style="color:var(--red);text-align:center;font-size:0.8rem;margin-top:12px"></p>
+  </div>
+</div>
+
+<div id="app" style="display:none">
 
   <!-- SIDEBAR -->
   <aside id="sidebar">
@@ -989,6 +1047,15 @@ body {
       <button class="nav-item" id="nav-analytics" onclick="goTo('analytics')">
         <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Analytics
+      </button>
+      <button class="nav-item" id="nav-selections" onclick="goTo('selections')">
+        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        Seleções
+        <span class="nav-badge" id="nav-badge-selections" style="display:none">0</span>
+      </button>
+      <button class="nav-item" id="nav-sales" onclick="goTo('sales')">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Vendas
       </button>
       <button class="nav-item" id="nav-settings" onclick="goTo('settings')">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
@@ -1134,6 +1201,23 @@ body {
             <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
             Copiar
           </button>
+          <button class="btn btn-ghost" onclick="showQR()">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
+            QR Code
+          </button>
+        </div>
+
+        <!-- Modal QR -->
+        <div id="qr-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.7);align-items:center;justify-content:center" onclick="if(event.target===this)closeQR()">
+          <div style="background:#fff;border-radius:16px;padding:26px;text-align:center;max-width:320px">
+            <div id="qr-title" style="font-weight:700;color:#111;margin-bottom:14px">QR Code do álbum</div>
+            <div id="qr-canvas-wrap" style="display:flex;justify-content:center"></div>
+            <div style="font-size:.7rem;color:#888;margin:12px 0 16px">O cliente escaneia e abre o álbum direto.</div>
+            <div style="display:flex;gap:8px;justify-content:center">
+              <button class="btn btn-primary" onclick="downloadQR()">Baixar PNG</button>
+              <button class="btn btn-ghost" onclick="closeQR()">Fechar</button>
+            </div>
+          </div>
         </div>
 
         <div class="section-header" style="margin-bottom:12px">
@@ -1208,6 +1292,36 @@ body {
 
       </div>
 
+      <!-- ── SELEÇÕES ── -->
+      <div class="screen" id="screen-selections">
+        <div class="section-header" style="margin-bottom:16px">
+          <span class="section-title">Seleções dos clientes</span>
+          <button class="btn btn-ghost" onclick="initSelectionsScreen()">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Atualizar
+          </button>
+        </div>
+        <div id="selections-list"></div>
+        <div id="selections-empty" style="color:var(--muted);font-size:0.7rem;padding:30px 0">
+          Nenhuma seleção recebida ainda. Quando um cliente enviar as favoritas dele, aparecem aqui.
+        </div>
+      </div>
+
+      <!-- ── VENDAS ── -->
+      <div class="screen" id="screen-sales">
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-label">Receita (aprovada)</div><div class="stat-value accent" id="sales-total">—</div></div>
+          <div class="stat-card"><div class="stat-label">Vendas</div><div class="stat-value" id="sales-count">—</div></div>
+          <div class="stat-card"><div class="stat-label">Fotos vendidas</div><div class="stat-value" id="sales-photos">—</div></div>
+        </div>
+        <div class="section-header" style="margin:18px 0 12px">
+          <span class="section-title">Pedidos</span>
+          <button class="btn btn-ghost" onclick="initSalesScreen()">Atualizar</button>
+        </div>
+        <div id="sales-list"></div>
+        <div id="sales-empty" style="color:var(--muted);font-size:0.7rem;padding:30px 0">Nenhuma venda ainda.</div>
+      </div>
+
       <!-- ── SETTINGS ── -->
       <div class="screen" id="screen-settings">
 
@@ -1216,6 +1330,32 @@ body {
           <select id="settings-gallery-select" class="admin-select" onchange="loadGallerySettings(this.value)">
             <option value="">Selecione uma galeria</option>
           </select>
+        </div>
+
+        <div class="settings-group" style="max-width:560px;margin-bottom:24px">
+          <div class="settings-group-title">Segurança da conta</div>
+          <div class="toggle-desc" style="margin-bottom:12px">
+            Autenticação em duas etapas (TOTP) — exige um código do seu app autenticador
+            (Google Authenticator, 1Password, Authy) além da senha para entrar no painel.
+          </div>
+          <div id="mfa-status" style="font-size:0.72rem;color:var(--muted);margin-bottom:10px">Carregando…</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-ghost" id="mfa-enroll-btn" onclick="startMfaEnroll()" style="display:none">Ativar 2FA</button>
+            <button class="btn btn-ghost" id="mfa-remove-btn" onclick="removeMfaFactor()" style="display:none">Remover 2FA</button>
+          </div>
+          <div id="mfa-enroll-box" style="display:none;margin-top:14px">
+            <div id="mfa-qr" style="width:180px;height:180px;background:#fff;padding:8px;border-radius:8px"></div>
+            <div class="form-group" style="margin-top:10px;max-width:200px">
+              <label class="form-label">Código do app</label>
+              <input type="text" class="form-input" id="mfa-code" placeholder="000000" maxlength="6" inputmode="numeric">
+            </div>
+            <button class="btn btn-primary" onclick="confirmMfaEnroll()">Confirmar e ativar</button>
+          </div>
+        </div>
+
+        <div class="settings-group" style="max-width:560px;margin-bottom:24px">
+          <div class="settings-group-title">Últimas ações (auditoria)</div>
+          <div id="audit-log-list" style="font-size:0.72rem;color:var(--muted)">Carregando…</div>
         </div>
 
         <div id="settings-form" style="display:none; max-width:560px">
@@ -1263,10 +1403,39 @@ body {
             </div>
             <div class="toggle-row">
               <div>
+                <div class="toggle-label">Marca d'água</div>
+                <div class="toggle-desc">Protege as fotos (álbum fechado). Bloqueia o download do original limpo.</div>
+              </div>
+              <button class="toggle-btn" id="set-watermark" onclick="toggleWatermark()" data-on="false">
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Preço por foto (paywall)</div>
+                <div class="toggle-desc">Com marca d'água + preço &gt; 0, o cliente compra os originais (Mercado Pago). 0 = sem venda.</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="color:var(--muted);font-size:.8rem">R$</span>
+                <input type="number" id="set-price" min="0" step="0.5" placeholder="0,00"
+                  style="width:80px;padding:7px 9px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.85rem">
+              </div>
+            </div>
+            <div class="toggle-row">
+              <div>
                 <div class="toggle-label">Status da galeria</div>
                 <div class="toggle-desc">Publicada e acessível pelo link</div>
               </div>
               <button class="toggle-btn" id="set-status" onclick="toggleStatus()" data-on="true">
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Entrega de fotos full</div>
+                <div class="toggle-desc">OFF: cliente vê thumbnail + botão "baixar original" para cada foto. ON: full_url vem na listagem (padrão rápido).</div>
+              </div>
+              <button class="toggle-btn" id="set-full-url-delivery" onclick="toggleFullUrlDelivery()" data-on="true">
                 <span class="toggle-thumb"></span>
               </button>
             </div>
@@ -1277,6 +1446,35 @@ body {
               <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
               Salvar alterações
             </button>
+          </div>
+
+          <div class="settings-group" style="margin-top:22px">
+            <div class="settings-group-title">Reconhecimento facial</div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Ativar busca por rosto</div>
+                <div class="toggle-desc">Permite que clientes façam selfie para encontrar suas fotos automaticamente.</div>
+              </div>
+              <button class="toggle-btn" id="set-facial-recognition" onclick="toggleFacialRecognition()" data-on="true">
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+            <div class="toggle-desc" style="margin-bottom:12px;margin-top:12px">
+              Gera o índice facial deste álbum (roda aqui no navegador). Depois, o cliente pode
+              tirar uma selfie na galeria e ver só as fotos em que aparece. Nenhuma selfie é
+              armazenada — só o índice das fotos.
+            </div>
+            <div id="face-index-info" style="font-size:0.72rem;color:var(--muted);margin-bottom:10px"></div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <button class="btn btn-ghost" id="face-index-btn" onclick="generateFaceIndex()">
+                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Gerar / atualizar índice facial
+              </button>
+              <span id="face-index-status" style="font-size:0.72rem;color:var(--muted)"></span>
+            </div>
+            <div id="face-index-bar-wrap" style="display:none;margin-top:10px;height:6px;background:var(--panel2);border-radius:4px;overflow:hidden">
+              <div id="face-index-bar" style="height:100%;width:0;background:var(--accent);transition:width .2s"></div>
+            </div>
           </div>
 
         </div>
@@ -1340,6 +1538,12 @@ body {
         </div>
       </div>
 
+      <!-- LGPD ANALYTICS (TASK #22) -->
+      <div id="lgpd-analytics"></div>
+
+      <!-- LGPD RIGHTS PORTAL (TASK #23) -->
+      <div id="lgpd-rights"></div>
+
     </div>
   </main>
 </div>
@@ -1369,17 +1573,244 @@ body {
   </div>
 </div>
 
-<div id="toast"></div>
+<div id="toast-box"></div>
+
+<!-- MFA CHALLENGE MODAL (login) -->
+<div id="mfa-modal">
+  <div id="mfa-modal-box">
+    <div id="mfa-modal-title">VERIFICAÇÃO EM DUAS ETAPAS</div>
+    <div id="mfa-modal-msg">Digite o código de 6 dígitos do seu app autenticador.</div>
+    <input type="text" class="form-input" id="mfa-challenge-code" placeholder="000000" maxlength="6" inputmode="numeric"
+      style="text-align:center;font-size:1.1rem;letter-spacing:4px;margin-bottom:10px;width:100%;box-sizing:border-box">
+    <div id="mfa-challenge-error" style="color:var(--red);font-size:0.72rem;min-height:16px;margin-bottom:6px"></div>
+    <div id="confirm-actions">
+      <button class="btn btn-ghost" id="mfa-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="mfa-ok">Verificar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div id="confirm-modal">
+  <div id="confirm-box">
+    <div id="confirm-title">CONFIRMAR EXCLUSÃO</div>
+    <div id="confirm-msg"></div>
+    <div id="confirm-actions">
+      <button class="btn btn-ghost" id="confirm-cancel">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-ok">Excluir</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase-config.js"></script>
+<script src="gallery-utils.js"></script>
+<script src="admin-facial-index.js"></script>
+<script src="admin-backup.js"></script>
+<script src="admin-qr.js"></script>
+<script src="admin-analytics.js"></script>
+<script src="admin-galleries.js"></script>
+<script src="admin-detail.js"></script>
 <script>
 // ── SUPABASE ──
-const SURL = 'https://vtblxwaxwuztehtxkygp.supabase.co';
-const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Ymx4d2F4d3V6dGVodHhreWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NDQzMjMsImV4cCI6MjA5NjUyMDMyM30.0oscbNInwJzc2YN5eDYN76IBXvR0cTDbaLe4LDe0aKw';
-const sb = supabase.createClient(SURL, SKEY);
+const sb = getSupabase();
 const BUCKET = 'gallery-photos';
-const BASE_URL = 'https://lrp-gallery.vercel.app';
+const BASE_URL = 'https://www.souleandroribeiro.com.br/gallery';
+const ADMIN_EMAIL = 'souleandroribeiro@gmail.com';
+
+// ── LOG DE ERROS (observabilidade) ──
+let _errCount = 0;
+function reportError(msg, detail) {
+  if (_errCount++ > 5) return; // evita flood
+  try { sb.rpc('log_error', { p_page: 'admin', p_message: String(msg||''), p_detail: String(detail||''), p_ua: navigator.userAgent }); } catch(e) {}
+}
+window.addEventListener('error', e => reportError(e.message, (e.filename||'')+':'+(e.lineno||'')));
+window.addEventListener('unhandledrejection', e => reportError('unhandledrejection', (e.reason&&e.reason.message)||String(e.reason)));
+
+// ── TRILHA DE AUDITORIA (migração 16) ──
+// Ações sensíveis (excluir, criar, mudar configurações) ficam registradas
+// em admin_actions — protegida pela mesma checagem de admin (_admin_ok).
+async function logAdminAction(action, detail) {
+  try { await sb.from('admin_actions').insert({ action, detail: detail || {} }); } catch (e) { /* não trava o fluxo por causa do log */ }
+}
+
+// ── ASSINATURA DE URLs (thumbs do painel via worker assinado) ──
+// Assina um array de URLs numa chamada. Se a RPC não existir (schema antigo),
+// devolve as URLs originais — assim o painel nunca quebra.
+async function signUrls(urls) {
+  if (!urls?.length) return urls;
+  try {
+    const { data, error } = await sb.rpc('sign_urls', { p_urls: urls.map(u => u || '') });
+    if (error || !Array.isArray(data)) return urls;
+    return urls.map((u, i) => data[i] || u);
+  } catch (e) { return urls; }
+}
+// Assina thumb_url e full_url de um array de fotos (in-place).
+async function signPhotos(photos) {
+  if (!photos?.length) return;
+  const flat = [];
+  photos.forEach(p => flat.push(p.thumb_url || '', p.full_url || ''));
+  const signed = await signUrls(flat);
+  photos.forEach((p, i) => {
+    if (p.thumb_url) p.thumb_url = signed[i*2]   || p.thumb_url;
+    if (p.full_url)  p.full_url  = signed[i*2+1] || p.full_url;
+  });
+}
+
+// hashSHA256() vem de gallery-utils.js (mesma implementação usada em gallery.html)
+
+// ── AUTH GATE ──
+async function checkAuth() {
+  const { data } = await sb.auth.getSession();
+  if (data.session) {
+    if (data.session.user.email !== ADMIN_EMAIL) {
+      await sb.auth.signOut();
+      document.getElementById('login-error').textContent = 'Acesso não autorizado.';
+      document.getElementById('login-gate').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+      return false;
+    }
+    if (!(await ensureAal2())) return false;
+    document.getElementById('login-gate').style.display = 'none';
+    document.getElementById('app').style.display = 'grid';
+    refreshSelectionsBadge();
+    return true;
+  }
+  document.getElementById('login-gate').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  return false;
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { errEl.textContent = 'Credenciais inválidas'; return; }
+  // A troca pra tela do app acontece em onAuthStateChange (única fonte de
+  // verdade: evita checar aal2 duas vezes / abrir dois modais de código).
+}
+
+// ── 2FA (TOTP) ──────────────────────────────────────────────
+// aal2 só é exigido se já existir um fator TOTP verificado (evita lockout
+// antes do primeiro cadastro). Ver migração 15 (_admin_ok no banco).
+async function ensureAal2() {
+  const { data, error } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (error) return true; // API fora do ar: não tranca o admin por causa disso
+  if (data.currentLevel === 'aal2' || data.nextLevel === 'aal1') return true; // já ok ou sem fator cadastrado
+  const { data: factors } = await sb.auth.mfa.listFactors();
+  const factor = factors && factors.totp && factors.totp[0];
+  if (!factor) return true;
+  return await promptMfaChallenge(factor.id);
+}
+
+function promptMfaChallenge(factorId) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('mfa-modal');
+    const input = document.getElementById('mfa-challenge-code');
+    const errEl = document.getElementById('mfa-challenge-error');
+    input.value = ''; errEl.textContent = '';
+    modal.classList.add('open');
+    input.focus();
+    const cleanup = () => { modal.classList.remove('open'); document.getElementById('mfa-ok').onclick = null; document.getElementById('mfa-cancel').onclick = null; };
+    document.getElementById('mfa-cancel').onclick = async () => { cleanup(); await sb.auth.signOut(); resolve(false); };
+    document.getElementById('mfa-ok').onclick = async () => {
+      const code = input.value.trim();
+      if (!/^\d{6}$/.test(code)) { errEl.textContent = 'Digite os 6 dígitos.'; return; }
+      const { error } = await sb.auth.mfa.challengeAndVerify({ factorId, code });
+      if (error) { errEl.textContent = 'Código inválido.'; return; }
+      cleanup(); resolve(true);
+    };
+  });
+}
+
+async function refreshMfaStatus() {
+  const { data } = await sb.auth.mfa.listFactors();
+  const factor = data && data.totp && data.totp[0];
+  const statusEl = document.getElementById('mfa-status');
+  const enrollBtn = document.getElementById('mfa-enroll-btn');
+  const removeBtn = document.getElementById('mfa-remove-btn');
+  if (factor) {
+    statusEl.textContent = 'Ativada — o app pede o código a cada novo login.';
+    enrollBtn.style.display = 'none'; removeBtn.style.display = 'inline-flex';
+  } else {
+    statusEl.textContent = 'Desativada — só senha protege o painel.';
+    enrollBtn.style.display = 'inline-flex'; removeBtn.style.display = 'none';
+  }
+  document.getElementById('mfa-enroll-box').style.display = 'none';
+}
+
+async function refreshAuditLog() {
+  const el = document.getElementById('audit-log-list');
+  const { data, error } = await sb.from('admin_actions').select('*').order('created_at', { ascending: false }).limit(20);
+  if (error) { el.textContent = 'Tabela ainda não existe (rode a migração 16).'; return; }
+  if (!data || !data.length) { el.textContent = 'Nenhuma ação registrada ainda.'; return; }
+  el.innerHTML = data.map(a => {
+    const d = new Date(a.created_at).toLocaleString('pt-BR');
+    const detail = a.detail && Object.keys(a.detail).length ? ' — ' + esc(JSON.stringify(a.detail)) : '';
+    return `<div style="padding:4px 0;border-bottom:1px solid var(--border)">${d} · <b style="color:var(--text)">${esc(a.action)}</b>${detail}</div>`;
+  }).join('');
+}
+
+let _mfaEnrollFactorId = null;
+async function startMfaEnroll() {
+  const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp' });
+  if (error) { toast('Erro ao iniciar 2FA: ' + error.message, 'error'); return; }
+  _mfaEnrollFactorId = data.id;
+  document.getElementById('mfa-qr').innerHTML = data.totp.qr_code;
+  document.getElementById('mfa-code').value = '';
+  document.getElementById('mfa-enroll-box').style.display = 'block';
+}
+
+async function confirmMfaEnroll() {
+  const code = document.getElementById('mfa-code').value.trim();
+  if (!/^\d{6}$/.test(code)) { toast('Digite os 6 dígitos do app autenticador', 'error'); return; }
+  const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: _mfaEnrollFactorId, code });
+  if (error) { toast('Código inválido', 'error'); return; }
+  logAdminAction('mfa_enrolled', {});
+  toast('2FA ativada!', 'success');
+  refreshMfaStatus();
+}
+
+async function removeMfaFactor() {
+  const { data } = await sb.auth.mfa.listFactors();
+  const factor = data && data.totp && data.totp[0];
+  if (!factor) return;
+  const ok = await showConfirmModal('Desativar a autenticação em duas etapas? O painel volta a depender só da senha.');
+  if (!ok) return;
+  const { error } = await sb.auth.mfa.unenroll({ factorId: factor.id });
+  if (error) { toast('Erro ao remover 2FA', 'error'); return; }
+  logAdminAction('mfa_removed', {});
+  toast('2FA removida', 'success');
+  refreshMfaStatus();
+}
+
+async function doGoogleLogin() {
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname }
+  });
+  if (error) {
+    document.getElementById('login-error').textContent = error.message;
+  }
+}
+
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    if (session.user.email !== ADMIN_EMAIL) {
+      sb.auth.signOut();
+      document.getElementById('login-error').textContent = 'Acesso não autorizado.';
+      return;
+    }
+    if (!(await ensureAal2())) return;
+    document.getElementById('login-gate').style.display = 'none';
+    document.getElementById('app').style.display = 'grid';
+    renderDashboard();
+    refreshSelectionsBadge();
+  }
+});
 
 // ── STATE ──
 let galleries = [];
@@ -1396,6 +1827,8 @@ const SCREENS = {
   new:       { title: 'Nova Galeria',   nav: 'nav-new'       },
   detail:    { title: 'Galeria',        nav: null            },
   analytics: { title: 'Analytics',      nav: 'nav-analytics' },
+  selections:{ title: 'Seleções',       nav: 'nav-selections'},
+  sales:     { title: 'Vendas',         nav: 'nav-sales'     },
   settings:  { title: 'Configurações',  nav: 'nav-settings'  },
   backup:    { title: 'Backup',         nav: 'nav-backup'    }
 };
@@ -1426,334 +1859,15 @@ function goTo(screen) {
   if(screen === 'dashboard') renderDashboard();
   if(screen === 'new')       resetNewForm();
   if(screen === 'analytics') initAnalyticsScreen();
+  if(screen === 'selections')initSelectionsScreen();
+  if(screen === 'sales')     initSalesScreen();
   if(screen === 'settings')  initSettingsScreen();
   if(screen === 'backup')    initBackupScreen();
 }
 
-function toggleMobileSidebar() {
-  document.getElementById('sidebar').classList.toggle('mobile-open');
-}
-
-// ── DASHBOARD ──
-async function renderDashboard() {
-  const grid = document.getElementById('gallery-grid');
-  const empty = document.getElementById('empty-dash');
-  grid.innerHTML = '<div style="color:var(--muted);font-size:0.7rem;padding:20px">Carregando...</div>';
-
-  const { data, error } = await sb
-    .from('galleries')
-    .select('*, photos!photos_gallery_id_fkey(id, thumb_url)')
-    .order('created_at', { ascending: false });
-
-  if(error) { toast('Erro ao carregar galerias: ' + error.message, 'error'); return; }
-  galleries = data || [];
-
-  const active = galleries.filter(g => g.status === 'live').length;
-  const totalPhotos = galleries.reduce((s,g) => s + (g.photos?.length||0), 0);
-  document.getElementById('stat-active').textContent = active;
-  document.getElementById('stat-photos').textContent = totalPhotos;
-  document.getElementById('stat-clients').textContent = galleries.length;
-  document.getElementById('nav-badge').textContent = galleries.length;
-
-  if(galleries.length === 0) {
-    grid.style.display = 'none';
-    empty.style.display = 'block';
-    return;
-  }
-
-  grid.style.display = 'grid';
-  empty.style.display = 'none';
-  grid.innerHTML = '';
-
-  galleries.forEach(g => {
-    const coverPhoto = g.photos?.find(p => p.id === g.cover_photo_id) || g.photos?.[0];
-    const thumb = coverPhoto?.thumb_url || `https://picsum.photos/400/225?random=${g.id}`;
-    const coverPos = `${g.cover_position_x ?? 50}% ${g.cover_position_y ?? 50}%`;
-    const card = document.createElement('div');
-    card.className = 'gallery-card';
-    card.innerHTML = `
-      <img class="gallery-card-thumb" src="${thumb}" alt="${g.name}" loading="lazy" style="object-position:${coverPos}">
-      <div class="gallery-card-body">
-        <div class="gallery-card-name">${g.name}</div>
-        <div class="gallery-card-meta">
-          <span class="gallery-card-info">${g.photos?.length||0} fotos · ${g.date||'—'}</span>
-          <span class="status-badge ${g.status==='live'?'status-live':'status-draft'}">${g.status==='live'?'Live':'Rascunho'}</span>
-        </div>
-      </div>
-      <div class="gallery-card-actions">
-        <button class="btn btn-ghost" style="padding:6px 12px;font-size:0.65rem" onclick="openDetail('${g.id}')">
-          <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Gerenciar
-        </button>
-        <button class="btn btn-ghost" style="padding:6px 12px;font-size:0.65rem" onclick="copyClientLink('${g.id}')">
-          <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-          Copiar link
-        </button>
-      </div>
-    `;
-    grid.appendChild(card);
-  });
-}
-
-// ── NEW GALLERY ──
-function resetNewForm() {
-  document.getElementById('input-name').value = '';
-  document.getElementById('input-date').value = '';
-  document.getElementById('input-location').value = '';
-  document.getElementById('upload-list').innerHTML = '';
-  pendingFiles = [];
-}
-
-function handleFiles(files) {
-  const list = document.getElementById('upload-list');
-  Array.from(files).forEach(file => {
-    const id = Date.now() + Math.random();
-    pendingFiles.push({ id, file });
-    const item = document.createElement('div');
-    item.className = 'upload-item';
-    item.id = `upload-${id}`;
-    item.innerHTML = `
-      <span class="upload-item-name">${file.name}</span>
-      <span class="upload-item-size">${(file.size/1024/1024).toFixed(1)}MB</span>
-      <div class="upload-progress-bar"><div class="upload-progress-fill" id="prog-${id}" style="width:0%"></div></div>
-      <span class="upload-status uploading" id="status-${id}">—</span>
-    `;
-    list.appendChild(item);
-  });
-}
-
-function setProgress(id, pct, done=false, err=false) {
-  const bar = document.getElementById(`prog-${id}`);
-  const status = document.getElementById(`status-${id}`);
-  if(bar) bar.style.width = pct + '%';
-  if(status) {
-    if(done)  { status.textContent = '✓'; status.className = 'upload-status done'; }
-    else if(err) { status.textContent = '✗'; status.className = 'upload-status error'; }
-    else { status.textContent = pct + '%'; }
-  }
-}
-
-async function createGallery() {
-  const name = document.getElementById('input-name').value.trim();
-  if(!name) { toast('Digite o nome do evento', 'error'); return; }
-
-  const date = document.getElementById('input-date').value;
-  const location = document.getElementById('input-location').value.trim();
-  const slug = name.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
-
-  toast('Criando galeria...', '');
-
-  // 1. Cria galeria no banco
-  const { data: gallery, error: gErr } = await sb
-    .from('galleries')
-    .insert({ name, slug, date, location, status: 'live' })
-    .select().single();
-
-  if(gErr) { toast('Erro: ' + gErr.message, 'error'); return; }
-
-  // 2. Upload das fotos
-  if(pendingFiles.length > 0) {
-    let pos = 0;
-    for(const {id, file} of pendingFiles) {
-      setProgress(id, 20);
-      const ext = file.name.split('.').pop().toLowerCase();
-      const path = `galleries/${gallery.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
-
-      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type });
-      if(upErr) { setProgress(id, 0, false, true); continue; }
-
-      setProgress(id, 70);
-
-      const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(path);
-      const fullUrl = urlData.publicUrl;
-      const { data: thumbData } = sb.storage.from(BUCKET).getPublicUrl(path, { transform: { width: 600, quality: 80, format: 'webp' } });
-      const thumbUrl = thumbData.publicUrl;
-
-      await sb.from('photos').insert({
-        gallery_id: gallery.id, filename: file.name,
-        storage_path: path, thumb_url: thumbUrl,
-        full_url: fullUrl, size_bytes: file.size, position: pos++
-      });
-
-      setProgress(id, 100, true);
-    }
-  }
-
-  toast(`"${name}" criada!`, 'success');
-  setTimeout(() => openDetail(gallery.id), 600);
-}
-
-// ── DETAIL ──
-async function openDetail(id) {
-  const { data: g, error } = await sb
-    .from('galleries')
-    .select('*, photos!photos_gallery_id_fkey(id, filename, storage_path, thumb_url, full_url, position, group_name)')
-    .eq('id', id).single();
-
-  if(error || !g) { toast('Erro ao carregar galeria', 'error'); return; }
-
-  currentGalleryId = id;
-  const link = `${BASE_URL}/gallery.html?slug=${g.slug}`;
-
-  document.getElementById('detail-title').textContent = g.name.toUpperCase();
-  document.getElementById('detail-meta').textContent = `${g.date||'—'} · ${g.location||'—'} · ${new Date(g.created_at).toLocaleDateString('pt-BR')}`;
-  document.getElementById('detail-link').textContent = link;
-  g._link = link;
-
-  g.photos?.sort((a,b) => a.position - b.position);
-  renderDetailPhotos(g);
-  goTo('detail');
-  document.getElementById('topbar-title').textContent = g.name.toUpperCase();
-}
-
-function renderDetailPhotos(g) {
-  const grid = document.getElementById('detail-grid');
-  const count = document.getElementById('detail-photo-count');
-  count.textContent = `${g.photos?.length||0} fotos`;
-  grid.innerHTML = '';
-  currentGalleryCoverPhotoId = g.cover_photo_id || null;
-
-  (g.photos||[]).forEach((photo) => {
-    const isCover = photo.id === currentGalleryCoverPhotoId;
-    const div = document.createElement('div');
-    div.className = 'detail-photo' + (isCover ? ' is-cover' : '') +
-                    (groupSelection.has(String(photo.id)) ? ' selected' : '');
-    div.dataset.id = photo.id;
-    div.innerHTML = `
-      <img src="${photo.thumb_url}" alt="${photo.filename}" loading="lazy">
-      ${photo.group_name ? `<span class="detail-photo-group">${photo.group_name}</span>` : ''}
-      <button class="detail-photo-cover" onclick="openCoverEditor('${photo.id}','${photo.full_url}',event)" title="${isCover ? 'Capa atual — clique para reposicionar' : 'Definir como capa'}">
-        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-      </button>
-      <button class="detail-photo-del" onclick="deletePhoto('${photo.id}','${photo.storage_path}')" title="Remover">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    `;
-    div.addEventListener('click', (e) => {
-      if (!groupMode) return;
-      e.stopPropagation();
-      const key = String(photo.id);
-      if (groupSelection.has(key)) groupSelection.delete(key);
-      else groupSelection.add(key);
-      updateGroupBar();
-    }, true); // captura antes dos botões internos no modo grupos
-    grid.appendChild(div);
-  });
-
-  // Sugestões de grupos existentes no datalist
-  const names = [...new Set((g.photos||[]).map(p => p.group_name).filter(Boolean))];
-  document.getElementById('group-names').innerHTML = names.map(n => `<option value="${n}">`).join('');
-}
-
-// ── GRUPOS (admin) ──
-let groupMode = false;
-const groupSelection = new Set();
-
-function toggleGroupMode() {
-  groupMode = !groupMode;
-  groupSelection.clear();
-  document.getElementById('group-bar').style.display = groupMode ? 'flex' : 'none';
-  document.getElementById('btnGroupMode').classList.toggle('btn-primary', groupMode);
-  updateGroupBar();
-  if (!groupMode) openDetail(currentGalleryId);
-  else toast('Clique nas fotos para selecionar, depois dê um nome ao grupo', '');
-}
-
-function updateGroupBar() {
-  document.getElementById('group-sel-count').textContent = `${groupSelection.size} SELECIONADAS`;
-  document.querySelectorAll('.detail-photo').forEach(d =>
-    d.classList.toggle('selected', groupSelection.has(d.dataset.id)));
-}
-
-async function applyGroup(remove = false) {
-  if (!groupSelection.size) { toast('Selecione fotos primeiro', 'error'); return; }
-  const name = document.getElementById('group-name-input').value.trim();
-  if (!remove && !name) { toast('Digite o nome do grupo', 'error'); return; }
-  const ids = [...groupSelection];
-  const { error } = await sb.from('photos')
-    .update({ group_name: remove ? null : name })
-    .in('id', ids);
-  if (error) { toast('Erro: ' + error.message, 'error'); return; }
-  toast(remove ? `Grupo removido de ${ids.length} foto(s)` : `${ids.length} foto(s) → "${name}"`, 'success');
-  groupSelection.clear();
-  // Recarrega mantendo o modo grupos ativo
-  const { data: g } = await sb.from('galleries')
-    .select('*, photos!photos_gallery_id_fkey(id, filename, storage_path, thumb_url, full_url, position, group_name)')
-    .eq('id', currentGalleryId).single();
-  if (g) { g.photos?.sort((a,b) => a.position - b.position); renderDetailPhotos(g); }
-  updateGroupBar();
-}
-
-async function addPhotosToDetail(files) {
-  if(!currentGalleryId) return;
-  toast(`Enviando ${files.length} foto(s)...`, '');
-
-  const { data: existing } = await sb.from('photos').select('position').eq('gallery_id', currentGalleryId).order('position', {ascending: false}).limit(1);
-  let pos = (existing?.[0]?.position ?? -1) + 1;
-
-  for(const file of Array.from(files)) {
-    const path = `galleries/${currentGalleryId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
-    const { error } = await sb.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type });
-    if(error) continue;
-
-    const { data: u } = sb.storage.from(BUCKET).getPublicUrl(path);
-    const { data: t } = sb.storage.from(BUCKET).getPublicUrl(path, { transform: { width: 800, height: 800, resize: 'contain', quality: 80, format: 'webp' } });
-
-    // Dimensões reais — usadas pelo layout justificado da galeria
-    const dims = await new Promise(res => {
-      const url = URL.createObjectURL(file);
-      const im = new Image();
-      im.onload  = () => { URL.revokeObjectURL(url); res({ w: im.naturalWidth, h: im.naturalHeight }); };
-      im.onerror = () => { URL.revokeObjectURL(url); res({ w: null, h: null }); };
-      im.src = url;
-    });
-
-    await sb.from('photos').insert({
-      gallery_id: currentGalleryId, filename: file.name,
-      storage_path: path, thumb_url: t.publicUrl,
-      full_url: u.publicUrl, size_bytes: file.size, position: pos++,
-      width: dims.w, height: dims.h
-    });
-  }
-
-  toast(`${files.length} foto(s) adicionada(s)!`, 'success');
-  openDetail(currentGalleryId);
-}
-
-async function deletePhoto(photoId, storagePath) {
-  await sb.storage.from(BUCKET).remove([storagePath]);
-  await sb.from('photos').delete().eq('id', photoId);
-  openDetail(currentGalleryId);
-}
-
-async function deleteCurrentGallery() {
-  if(!confirm('Excluir esta galeria? O link do cliente deixará de funcionar.')) return;
-  const { data: photos } = await sb.from('photos').select('storage_path').eq('gallery_id', currentGalleryId);
-  if(photos?.length) await sb.storage.from(BUCKET).remove(photos.map(p => p.storage_path));
-  await sb.from('galleries').delete().eq('id', currentGalleryId);
-  toast('Galeria excluída', 'error');
-  goTo('dashboard');
-}
-
-function copyLink() {
-  const link = document.getElementById('detail-link').textContent;
-  navigator.clipboard.writeText(link).then(() => toast('Link copiado!', 'success'));
-}
-
-function copyClientLink(id) {
-  const g = galleries.find(g => g.id === id);
-  if(!g) return;
-  const link = `${BASE_URL}/gallery.html?slug=${g.slug}`;
-  navigator.clipboard.writeText(link).then(() => toast('Link copiado!', 'success'));
-}
-
-function previewGallery() {
-  const g = galleries.find(g => g.id === currentGalleryId);
-  if(!g) return;
-  window.open(`${BASE_URL}/gallery.html?slug=${g.slug}`, '_blank');
-}
+// ── SELEÇÕES/VENDAS/DASHBOARD/NEW GALLERY: extraído para admin-galleries.js ──
+// ── DETAIL/GRUPOS(admin): extraído para admin-detail.js ──
+// ── QR CODE: extraído para admin-qr.js ──
 
 // ── DRAG & DROP ──
 const zone = document.getElementById('upload-zone');
@@ -1765,367 +1879,25 @@ zone.addEventListener('drop', e => {
   handleFiles(e.dataTransfer.files);
 });
 
-// ── TOAST ──
-function toast(msg, type='') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show' + (type ? ` ${type}` : '');
-  setTimeout(() => t.className = 'toast', 3000);
-}
+// toast() vem de gallery-utils.js
 
-// ── COVER EDITOR ──
-function openCoverEditor(photoId, photoUrl, e) {
-  if (e) e.stopPropagation();
-  coverEditorPhotoId = photoId;
-  coverEditorPosX = 50; coverEditorPosY = 50;
-  const img = document.getElementById('coverPreviewImg');
-  img.src = photoUrl;
-  img.style.objectPosition = '50% 50%';
-  document.getElementById('coverFocalDot').style.cssText = 'left:50%;top:50%';
-  document.getElementById('cover-editor').style.display = 'flex';
-  setupCoverEditorDrag();
-}
-
-function closeCoverEditor() {
-  document.getElementById('cover-editor').style.display = 'none';
-}
-
-function setCoverFocalPoint(x, y) {
-  coverEditorPosX = Math.round(Math.max(0, Math.min(100, x)) * 10) / 10;
-  coverEditorPosY = Math.round(Math.max(0, Math.min(100, y)) * 10) / 10;
-  const dot = document.getElementById('coverFocalDot');
-  dot.style.left = coverEditorPosX + '%';
-  dot.style.top  = coverEditorPosY + '%';
-  document.getElementById('coverPreviewImg').style.objectPosition = `${coverEditorPosX}% ${coverEditorPosY}%`;
-}
-
-function setupCoverEditorDrag() {
-  const el = document.getElementById('coverPreview');
-  const getPos = (cx, cy) => {
-    const r = el.getBoundingClientRect();
-    return { x: (cx - r.left) / r.width * 100, y: (cy - r.top) / r.height * 100 };
-  };
-  el.onmousedown = (e) => {
-    e.preventDefault();
-    const p = getPos(e.clientX, e.clientY); setCoverFocalPoint(p.x, p.y);
-    const onMove = (ev) => { const p2 = getPos(ev.clientX, ev.clientY); setCoverFocalPoint(p2.x, p2.y); };
-    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  };
-  el.ontouchstart = (e) => {
-    e.preventDefault();
-    const t = e.touches[0]; const p = getPos(t.clientX, t.clientY); setCoverFocalPoint(p.x, p.y);
-    el.ontouchmove = (ev) => { ev.preventDefault(); const t2 = ev.touches[0]; const p2 = getPos(t2.clientX, t2.clientY); setCoverFocalPoint(p2.x, p2.y); };
-    el.ontouchend = () => { el.ontouchmove = null; el.ontouchend = null; };
-  };
-}
-
-async function saveCoverPhoto() {
-  if (!currentGalleryId || !coverEditorPhotoId) return;
-  toast('Salvando...', '');
-  const { error } = await sb.from('galleries').update({
-    cover_photo_id: coverEditorPhotoId,
-    cover_position_x: coverEditorPosX,
-    cover_position_y: coverEditorPosY,
-  }).eq('id', currentGalleryId);
-  if (error) { toast('Erro: ' + error.message, 'error'); return; }
-  currentGalleryCoverPhotoId = coverEditorPhotoId;
-  toast('Capa atualizada!', 'success');
-  closeCoverEditor();
-  const g = galleries.find(g => g.id === currentGalleryId);
-  if (g) { g.cover_photo_id = coverEditorPhotoId; g.cover_position_x = coverEditorPosX; g.cover_position_y = coverEditorPosY; }
-  openDetail(currentGalleryId);
-}
-
-// ── ANALYTICS ──
-let analyticsData   = [];
-let analyticsSortBy = 'views';
-
-async function initAnalyticsScreen() {
-  // Carrega totais globais
-  const { data: allEvents } = await sb.from('photo_events').select('event_type');
-  if (allEvents) {
-    const v = allEvents.filter(e => e.event_type === 'view').length;
-    const l = allEvents.filter(e => e.event_type === 'like').length;
-    const s = allEvents.filter(e => e.event_type === 'save').length;
-    document.getElementById('astat-views').textContent = v;
-    document.getElementById('astat-likes').textContent = l;
-    document.getElementById('astat-saves').textContent = s;
-  }
-  // Popula selector de galerias
-  const sel = document.getElementById('analytics-gallery-select');
-  sel.innerHTML = '<option value="">Selecione uma galeria</option>';
-  galleries.forEach(g => {
-    sel.innerHTML += `<option value="${g.id}">${g.name}</option>`;
-  });
-}
-
-async function loadGalleryAnalytics(galleryId) {
-  const empty = document.getElementById('analytics-empty');
-  const wrap  = document.getElementById('analytics-table-wrap');
-  if (!galleryId) { wrap.style.display = 'none'; empty.style.display = 'block'; return; }
-
-  empty.textContent = 'Carregando...';
-  empty.style.display = 'block';
-  wrap.style.display  = 'none';
-
-  const [{ data: photos }, { data: events }] = await Promise.all([
-    sb.from('photos').select('id, thumb_url, filename, position')
-      .eq('gallery_id', galleryId).order('position'),
-    sb.from('photo_events').select('photo_id, event_type')
-      .eq('gallery_id', galleryId)
-  ]);
-
-  if (!photos?.length) { empty.textContent = 'Nenhuma foto nesta galeria.'; return; }
-
-  // Agrega por foto
-  const stats = {};
-  photos.forEach(p => { stats[p.id] = { photo: p, views: 0, likes: 0, saves: 0 }; });
-  (events || []).forEach(e => {
-    if (stats[e.photo_id]) stats[e.photo_id][e.event_type === 'view' ? 'views' : e.event_type === 'like' ? 'likes' : 'saves']++;
-  });
-
-  analyticsData = Object.values(stats);
-  analyticsSortBy = 'views';
-  renderAnalyticsTable();
-  empty.style.display = 'none';
-  wrap.style.display  = 'block';
-}
-
-function sortAnalytics(by) {
-  analyticsSortBy = by;
-  ['views','likes','saves'].forEach(k =>
-    document.getElementById('sort-' + k).classList.toggle('active', k === by)
-  );
-  renderAnalyticsTable();
-}
-
-function renderAnalyticsTable() {
-  const sorted = [...analyticsData].sort((a,b) => b[analyticsSortBy] - a[analyticsSortBy]);
-  const body = document.getElementById('analytics-table-body');
-  body.innerHTML = '';
-  sorted.forEach(row => {
-    const d = document.createElement('div');
-    d.className = 'atbl-row';
-    d.innerHTML = `
-      <img class="atbl-thumb" src="${row.photo.thumb_url || ''}" loading="lazy" alt="">
-      <div class="atbl-name">${row.photo.filename || '—'}</div>
-      <div class="atbl-num ${analyticsSortBy==='views'?'accent':''}">${row.views}</div>
-      <div class="atbl-num ${analyticsSortBy==='likes'?'accent':''}">${row.likes}</div>
-      <div class="atbl-num ${analyticsSortBy==='saves'?'accent':''}">${row.saves}</div>
-    `;
-    body.appendChild(d);
-  });
-}
-
-// ── SETTINGS ──
-let currentSettingsGalleryId = null;
-
-async function initSettingsScreen() {
-  const sel = document.getElementById('settings-gallery-select');
-  sel.innerHTML = '<option value="">Selecione uma galeria</option>';
-  galleries.forEach(g => {
-    sel.innerHTML += `<option value="${g.id}">${g.name}</option>`;
-  });
-  document.getElementById('settings-form').style.display  = 'none';
-  document.getElementById('settings-empty').style.display = 'block';
-}
-
-async function loadGallerySettings(galleryId) {
-  const form  = document.getElementById('settings-form');
-  const empty = document.getElementById('settings-empty');
-  if (!galleryId) { form.style.display = 'none'; empty.style.display = 'block'; return; }
-
-  currentSettingsGalleryId = galleryId;
-  const { data, error } = await sb.from('galleries').select('*').eq('id', galleryId).single();
-  if (error || !data) { toast('Erro ao carregar galeria', 'error'); return; }
-
-  document.getElementById('set-name').value     = data.name || '';
-  document.getElementById('set-date').value     = data.date || '';
-  document.getElementById('set-location').value = data.location || '';
-  document.getElementById('set-password').value = data.access_password || '';
-  document.getElementById('set-expires').value  = data.expires_at
-    ? data.expires_at.slice(0,16) : '';
-
-  setToggle('set-download', data.download_enabled !== false);
-  setToggle('set-status',   data.status === 'live');
-
-  empty.style.display = 'none';
-  form.style.display  = 'block';
-}
-
-function setToggle(id, on) {
-  const btn = document.getElementById(id);
-  btn.dataset.on = on ? 'true' : 'false';
-}
-
-function toggleDownload() {
-  const btn = document.getElementById('set-download');
-  btn.dataset.on = btn.dataset.on === 'true' ? 'false' : 'true';
-}
-
-function toggleStatus() {
-  const btn = document.getElementById('set-status');
-  btn.dataset.on = btn.dataset.on === 'true' ? 'false' : 'true';
-}
-
-async function saveGallerySettings() {
-  if (!currentSettingsGalleryId) return;
-  const expiresRaw = document.getElementById('set-expires').value;
-  const payload = {
-    name:             document.getElementById('set-name').value.trim(),
-    date:             document.getElementById('set-date').value || null,
-    location:         document.getElementById('set-location').value.trim() || null,
-    access_password:  document.getElementById('set-password').value.trim() || null,
-    expires_at:       expiresRaw ? new Date(expiresRaw).toISOString() : null,
-    download_enabled: document.getElementById('set-download').dataset.on === 'true',
-    status:           document.getElementById('set-status').dataset.on === 'true' ? 'live' : 'draft'
-  };
-  const { error } = await sb.from('galleries').update(payload).eq('id', currentSettingsGalleryId);
-  if (error) { toast('Erro ao salvar: ' + error.message, 'error'); return; }
-  toast('Configurações salvas!', 'success');
-  // Atualiza objeto local
-  const g = galleries.find(g => g.id === currentSettingsGalleryId);
-  if (g) Object.assign(g, payload);
-}
-
-// ── BACKUP ──
-
-function initBackupScreen() {
-  const last = localStorage.getItem('lrp_last_backup');
-  const wrap = document.getElementById('backup-last-wrap');
-  if (last) {
-    wrap.style.display = 'block';
-    document.getElementById('backup-last-label').textContent =
-      'Realizado em ' + new Date(last).toLocaleString('pt-BR');
-  } else {
-    wrap.style.display = 'none';
-  }
-  document.getElementById('backup-progress-wrap').style.display = 'none';
-}
-
-async function fetchAllBackupData() {
-  const { data: galleriesData, error: gErr } = await sb
-    .from('galleries').select('*').order('created_at', { ascending: false });
-  if (gErr) throw gErr;
-
-  const { data: photosData, error: pErr } = await sb
-    .from('photos').select('*').order('gallery_id, position');
-  if (pErr) throw pErr;
-
-  // photo_events paginado — Supabase retorna no máx 1000/request
-  let events = [], from = 0;
-  while (true) {
-    const { data, error } = await sb
-      .from('photo_events').select('*').range(from, from + 999);
-    if (error || !data?.length) break;
-    events = events.concat(data);
-    if (data.length < 1000) break;
-    from += 1000;
-  }
-
-  return {
-    exported_at: new Date().toISOString(),
-    version: '1.0',
-    stats: { galleries: galleriesData.length, photos: photosData.length, events: events.length },
-    galleries: galleriesData,
-    photos: photosData,
-    photo_events: events,
-  };
-}
-
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
-}
-
-async function backupJSON() {
-  toast('Exportando dados...', '');
-  try {
-    const data = await fetchAllBackupData();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    downloadBlob(blob, `lrp-gallery-backup-${new Date().toISOString().slice(0,10)}.json`);
-    localStorage.setItem('lrp_last_backup', new Date().toISOString());
-    toast('JSON exportado!', 'success');
-    initBackupScreen();
-  } catch (err) {
-    toast('Erro: ' + err.message, 'error');
-  }
-}
-
-async function backupZIP() {
-  const btn = document.getElementById('btn-backup-zip');
-  const progressWrap = document.getElementById('backup-progress-wrap');
-  btn.disabled = true;
-  progressWrap.style.display = 'block';
-
-  function setProgress(label, pct) {
-    document.getElementById('backup-progress-label').textContent = label;
-    document.getElementById('backup-progress-pct').textContent = pct + '%';
-    document.getElementById('backup-progress-bar').style.width = pct + '%';
-  }
-
-  try {
-    setProgress('Buscando dados do banco...', 5);
-    const data = await fetchAllBackupData();
-
-    const zip = new JSZip();
-    zip.file('backup.json', JSON.stringify(data, null, 2));
-
-    const gallerySlugMap = {};
-    data.galleries.forEach(g => { gallerySlugMap[g.id] = g.slug || g.id; });
-
-    const photos = data.photos;
-    const total = photos.length;
-
-    if (total === 0) {
-      setProgress('Nenhuma foto encontrada.', 10);
-    } else {
-      let done = 0;
-      const BATCH = 5;
-      for (let i = 0; i < photos.length; i += BATCH) {
-        await Promise.all(photos.slice(i, i + BATCH).map(async (photo) => {
-          try {
-            const res = await fetch(photo.full_url);
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const blob = await res.blob();
-            const slug = gallerySlugMap[photo.gallery_id] || photo.gallery_id;
-            const name = photo.filename || photo.storage_path.split('/').pop();
-            zip.folder(`galleries/${slug}`).file(name, blob);
-          } catch (_) { /* foto inacessível — ignora */ }
-          done++;
-          setProgress(`Baixando fotos (${done} de ${total})...`, Math.round(10 + (done / total) * 80));
-        }));
-      }
-    }
-
-    setProgress('Comprimindo ZIP...', 92);
-    const zipBlob = await zip.generateAsync(
-      { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } },
-      (meta) => setProgress('Comprimindo ZIP...', Math.round(92 + meta.percent * 0.08))
-    );
-
-    downloadBlob(zipBlob, `lrp-gallery-backup-${new Date().toISOString().slice(0,10)}.zip`);
-    localStorage.setItem('lrp_last_backup', new Date().toISOString());
-    setProgress('Concluído!', 100);
-    toast('Backup ZIP baixado!', 'success');
-    initBackupScreen();
-  } catch (err) {
-    toast('Erro no backup: ' + err.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar ZIP completo`;
-  }
-}
+// ── COVER EDITOR/SETTINGS: extraído para admin-detail.js ──
+// ── BACKUP: extraído para admin-backup.js ──
 
 // ── INIT ──
-renderDashboard();
+(async () => {
+  if (await checkAuth()) { renderDashboard(); }
+})();
 </script>
+
+<!-- TASK #22: Dashboard LGPD Analytics -->
+<script src="gallery-admin-lgpd-dashboard.js"></script>
+
+<!-- TASK #23: Rights Portal -->
+<script src="gallery-admin-rights-portal.js"></script>
+
+<!-- TASK #26: E2E Tests -->
+<script src="test-lgpd-e2e.js"></script>
 
 </body>
 </html>
