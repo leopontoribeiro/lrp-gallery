@@ -1,0 +1,35 @@
+name: Auto Delete Biometric Data (Daily)
+
+on:
+  schedule:
+    # Executa todo dia às 2h UTC
+    - cron: '0 2 * * *'
+
+  # Permite disparo manual
+  workflow_dispatch:
+
+jobs:
+  auto-delete:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger auto-delete biometric function
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/auto-delete-biometric" \
+            -d '{}'
+
+        env:
+          # Adicionar no GitHub Secrets:
+          # - SUPABASE_URL: https://vtblxwaxwuztehtxkygp.supabase.co
+          # - SUPABASE_ANON_KEY: sua-chave-anon
+
+      - name: Log result
+        if: success()
+        run: echo "✅ Auto-delete biometric job triggered successfully"
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "❌ Auto-delete biometric job failed"
