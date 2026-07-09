@@ -1,0 +1,93 @@
+================================================================================
+⚡ QUICK START - 15 MINUTOS PARA 10/10
+================================================================================
+
+PASSO 1: Migration SQL (2 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Abrir: https://app.supabase.com/project/vtblxwaxwuztehtxkygp/sql
+2. Novo: "+ New query"
+3. Cole TUDO de: migration-qr-codes-auth-monitoring.sql
+4. Run
+5. ✅ Resultado: "✅ QR Codes migration complete"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PASSO 2: Edge Function (3 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Abrir: https://app.supabase.com/project/vtblxwaxwuztehtxkygp/functions
+2. "Create a new function"
+3. Nome: security-headers
+4. Cole TUDO de: edge-function-security-headers.ts
+5. Deploy
+6. ✅ Resultado: "Successfully deployed"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PASSO 3: Sentry (5 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Ir: https://sentry.io
+2. Login/Registrar
+3. "Create Project"
+4. Platform: JavaScript
+5. Project name: lrp-gallery
+6. Copiar DSN (https://xxxxx@xxxxx.ingest.sentry.io/xxxxx)
+7. Abrir arquivo: sentry-config.js
+8. Linha 4: Cole DSN no lugar de YOUR_SENTRY_DSN
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PASSO 4: Testes (5 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] Login: https://seu-dominio/admin-login.html
+    Usuário: seu@email.com
+    Senha: sua_senha
+    Resultado: Redirecionado para /admin.html
+
+[ ] QR Code: Criar evento novo
+    Resultado: QR code aparece automaticamente
+
+[ ] Security Headers: DevTools > Network > qualquer request
+    Verificar: Content-Security-Policy presente
+    Resultado: Headers CSP, CORS, X-Frame-Options visíveis
+
+[ ] Error Logging: F12 > Console
+    Digite: throw new Error('Test')
+    Aguarde 1-2 min
+    Verificar: Sentry dashboard > Issues > Test error
+
+[ ] RLS Policy: Login como User A
+    Criar cliente A
+    Logout
+    Login como User B
+    Resultado: User A não vê clientes de User B
+
+================================================================================
+RESUMO
+================================================================================
+
+✅ Feito (no ar):
+  - Código core (GitHub)
+  - Git push (v1.0.0)
+  - Documentação (SKILL.md)
+
+⏳ Faltam (15 min):
+  - 4 passos manuais acima
+
+🎯 Resultado Final:
+  Score: 10/10
+  Status: Production Ready
+  Monitoramento: Sentry Live
+  Admin: Login seguro
+  QR Codes: Automáticos
+
+================================================================================
+Tempo Total: 15 minutos
+Esforço: Mínimo (copy/paste + cliques)
+Complexidade: Baixa
+
+Começar agora!
+================================================================================

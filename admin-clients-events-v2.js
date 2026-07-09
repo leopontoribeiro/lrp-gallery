@@ -498,9 +498,17 @@ class ClientsEventsAdmin {
 const clientsEventsAdmin = new ClientsEventsAdmin();
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => clientsEventsAdmin.init());
+  document.addEventListener('DOMContentLoaded', () => {
+    clientsEventsAdmin.init();
+    if (typeof initAdminActions === 'function') {
+      initAdminActions(supabase, clientsEventsAdmin);
+    }
+  });
 } else {
   clientsEventsAdmin.init();
+  if (typeof initAdminActions === 'function') {
+    initAdminActions(supabase, clientsEventsAdmin);
+  }
 }
 
 window.clientsEventsAdmin = clientsEventsAdmin;

@@ -1,0 +1,39 @@
+name = "lrp-gallery-signed"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+workers_dev = true
+
+# Bucket das fotos servidas
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "gallery-photos"
+
+# Bucket de BACKUP (nunca servido publicamente): réplica das fotos + dumps do banco
+[[r2_buckets]]
+binding = "BACKUP"
+bucket_name = "gallery-photos-backup"
+
+# Backup diário das fotos (04:00 UTC) — réplica incremental PHOTOS -> BACKUP
+[triggers]
+crons = ["0 4 * * *"]
+
+# Rate limiting nativo (por colo). Só endpoints caros são limitados. GET de
+# imagem é barato, cacheado na borda e já exige assinatura — limitá-lo
+# quebraria o carregamento normal.
+[[unsafe.bindings]]
+name = "ZIP_RL"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 6, period = 60 }
+
+# /checkout cria pedido + fala com a API do Mercado Pago — sem limite, um
+# script podia inflar a tabela orders e estourar a cota do MP.
+[[unsafe.bindings]]
+name = "CHECKOUT_RL"
+type = "ratelimit"
+namespace_id = "1002"
+simple = { limit = 10, period = 60 }
+
+# Os segredos NÃO ficam aqui. Defina com:
+#   npx wrangler secret put SIGNING_SECRET
+#   npx wrangler secret put UPLOAD_SECRET

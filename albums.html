@@ -60,17 +60,53 @@
 </head>
 <body>
 
+<!-- LOGIN GATE -->
+<div id="login-gate" style="display:flex; align-items:center; justify-content:center; min-height:100vh; background:#0d0d0d;">
+  <form id="login-form" style="width:100%; max-width:340px; padding:24px; text-align:center;">
+    <h2 style="font-family:'Archivo Black',sans-serif; color:#fff; font-size:1.1rem; letter-spacing:0.04em; text-transform:uppercase; margin-bottom:24px;">Login</h2>
+    <input id="login-email" type="email" placeholder="Email" required
+      style="width:100%; padding:12px 14px; margin-bottom:12px; border:1px solid #333; border-radius:6px; background:#1a1a1a; color:#fff; font-family:inherit; font-size:0.9rem; outline:none;">
+    <input id="login-password" type="password" placeholder="Senha" required
+      style="width:100%; padding:12px 14px; margin-bottom:16px; border:1px solid #333; border-radius:6px; background:#1a1a1a; color:#fff; font-family:inherit; font-size:0.9rem; outline:none;">
+    <button type="submit"
+      style="width:100%; padding:12px; border:none; border-radius:6px; background:#fff; color:#0d0d0d; font-family:inherit; font-weight:600; font-size:0.9rem; cursor:pointer;">Entrar</button>
+    <div style="display:flex; align-items:center; gap:12px; margin:20px 0 16px;">
+      <div style="flex:1; height:1px; background:#333;"></div>
+      <span style="color:#666; font-size:0.75rem; letter-spacing:0.05em;">ou</span>
+      <div style="flex:1; height:1px; background:#333;"></div>
+    </div>
+    <button type="button" id="google-login-btn"
+      style="width:100%; padding:12px; border:1px solid #333; border-radius:6px; background:#1a1a1a; color:#fff; font-family:inherit; font-weight:500; font-size:0.9rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.99 23.99 0 0 0 0 24c0 3.77.9 7.35 2.56 10.53l7.97-5.94z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 5.94C6.51 42.62 14.62 48 24 48z"/></svg>
+      Entrar com Google
+    </button>
+    <p id="login-error" style="color:#e55; margin-top:12px; font-size:0.8rem; display:none;"></p>
+  </form>
+</div>
+
+<!-- MAIN CONTENT (hidden until auth) -->
+<div id="main-content" style="display:none;">
 <header>
-  <h1>@eusouleandroribeiro</h1>
+  <div style="display:flex; align-items:center; justify-content:center; gap:12px; position:relative;">
+    <h1 style="font-family:'Archivo Black',sans-serif; font-size:1.15rem; letter-spacing:0.04em; text-transform:uppercase;">@eusouleandroribeiro</h1>
+    <a id="admin-link" href="admin.html" style="position:absolute; right:0; top:50%; transform:translateY(-50%); font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:#999; text-decoration:none; border:1px solid #ccc; padding:4px 10px; border-radius:4px; display:none">Admin</a>
+  </div>
   <p>Galerias</p>
 </header>
 
 <div class="albums" id="albums"></div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase-config.js"></script>
 <script>
 const sb = getSupabase();
+const ADMIN_EMAIL = 'souleandroribeiro@gmail.com';
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function showAdminIfAllowed(email) {
+  if (email === ADMIN_EMAIL) document.getElementById('admin-link').style.display = '';
+}
 
 function fmtDate(d) {
   if (!d) return null;
@@ -79,10 +115,84 @@ function fmtDate(d) {
   return dt.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-async function init() {
+function showMain() {
+  document.getElementById('login-gate').style.display = 'none';
+  document.getElementById('main-content').style.display = '';
+}
+
+// Auth gate
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const { data: signInData, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    errEl.textContent = error.message;
+    errEl.style.display = '';
+    return;
+  }
+  if (signInData.user.email !== ADMIN_EMAIL) {
+    await sb.auth.signOut();
+    errEl.textContent = 'Acesso não autorizado.';
+    errEl.style.display = '';
+    return;
+  }
+  showAdminIfAllowed(signInData.user.email);
+  showMain();
+  await new Promise(r => requestAnimationFrame(r));
+  loadAlbums();
+});
+
+// Google login
+document.getElementById('google-login-btn').addEventListener('click', async () => {
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname }
+  });
+  if (error) {
+    const errEl = document.getElementById('login-error');
+    errEl.textContent = error.message;
+    errEl.style.display = '';
+  }
+});
+
+let albumsLoaded = false;
+async function checkSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session && session.user.email !== ADMIN_EMAIL) { await sb.auth.signOut(); return; }
+  if (session && !albumsLoaded) {
+    albumsLoaded = true;
+    showAdminIfAllowed(session.user.email);
+    showMain();
+    await new Promise(r => requestAnimationFrame(r));
+    loadAlbums();
+  }
+}
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    if (session.user.email !== ADMIN_EMAIL) {
+      sb.auth.signOut();
+      const errEl = document.getElementById('login-error');
+      errEl.textContent = 'Acesso não autorizado.';
+      errEl.style.display = '';
+      return;
+    }
+    if (!albumsLoaded) {
+      albumsLoaded = true;
+      showAdminIfAllowed(session.user.email);
+      showMain();
+      requestAnimationFrame(() => loadAlbums());
+    }
+  }
+});
+
+async function loadAlbums() {
   const { data, error } = await sb
     .from('galleries')
-    .select('id, name, slug, date, created_at, cover_photo_id, cover_position_x, cover_position_y, photos!photos_gallery_id_fkey(id, thumb_url)')
+    .select('id, name, slug, access_token, date, created_at, cover_photo_id, cover_position_x, cover_position_y')
     .eq('status', 'live')
     .order('created_at', { ascending: false });
 
@@ -92,29 +202,48 @@ async function init() {
     return;
   }
 
+  // Contagem exata e capa por galeria (sem o teto de 1000 do nested select)
+  await Promise.all(data.map(async g => {
+    const { count } = await sb.from('photos')
+      .select('*', { count: 'exact', head: true }).eq('gallery_id', g.id);
+    g._count = count || 0;
+    const q = g.cover_photo_id
+      ? sb.from('photos').select('thumb_url').eq('id', g.cover_photo_id).maybeSingle()
+      : sb.from('photos').select('thumb_url').eq('gallery_id', g.id).order('position').limit(1).maybeSingle();
+    const { data: cover } = await q;
+    g._coverThumb = cover?.thumb_url || null;
+  }));
+
+  // Assina as capas (worker exige assinatura); fallback mantém original
+  try {
+    const { data: signed, error } = await sb.rpc('sign_urls', { p_urls: data.map(g => g._coverThumb || '') });
+    if (!error && Array.isArray(signed)) data.forEach((g, i) => { if (g._coverThumb) g._coverThumb = signed[i] || g._coverThumb; });
+  } catch (e) {}
+
   data.forEach((g, i) => {
-    const cover = g.photos?.find(p => p.id === g.cover_photo_id) || g.photos?.[0];
     const pos = `${g.cover_position_x ?? 50}% ${g.cover_position_y ?? 50}%`;
     const date = fmtDate(g.date) || fmtDate(g.created_at?.slice(0, 10));
-    const n = g.photos?.length || 0;
+    const n = g._count || 0;
 
     const a = document.createElement('a');
     a.className = 'album';
-    a.href = `gallery.html?slug=${g.slug}`;
+    a.href = `gallery.html?t=${g.access_token}`;
     a.style.transitionDelay = `${(i % 6) * 70}ms`;
     a.innerHTML = `
       <div class="album-cover">
-        ${cover ? `<img src="${cover.thumb_url}" alt="${g.name}" loading="lazy"
+        ${g._coverThumb ? `<img src="${g._coverThumb}" alt="${esc(g.name)}" loading="lazy"
                        style="object-position:${pos}" onload="this.classList.add('loaded')">` : ''}
       </div>
-      <div class="album-name">${g.name}</div>
+      <div class="album-name">${esc(g.name)}</div>
       <div class="album-meta">${date ? date + ' · ' : ''}${n} foto${n === 1 ? '' : 's'}</div>
     `;
     wrap.appendChild(a);
-    requestAnimationFrame(() => requestAnimationFrame(() => a.classList.add('in')));
+    a.offsetHeight;
+    a.classList.add('in');
   });
 }
-init();
+
+checkSession();
 </script>
 </body>
 </html>

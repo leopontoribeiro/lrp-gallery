@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Política de Privacidade e LGPD - LRP Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8f9fa;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 42px;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 18px;
+            opacity: 0.95;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .contact-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .contact-item {
+            display: flex;
+            gap: 15px;
+            align-items: start;
+        }
+
+        .contact-icon {
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .contact-info h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .contact-info p {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .contact-info a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .contact-info a:hover {
+            text-decoration: underline;
+        }
+
+        section {
+            background: white;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+        }
+
+        h3 {
+            color: #333;
+            font-size: 20px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        h4 {
+            color: #555;
+            font-size: 16px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            margin-bottom: 15px;
+            line-height: 1.8;
+        }
+
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 10px;
+            line-height: 1.8;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+
+        .info-box {
+            background: #f0f7ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+
+        .compliance-checklist {
+            background: #f0fff4;
+            border-left: 4px solid #26de81;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+
+        .compliance-checklist li:before {
+            content: "✓ ";
+            color: #26de81;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .rights-card {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .rights-card strong {
+            color: #667eea;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .faq-item {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .faq-question {
+            background: #f9f9f9;
+            padding: 15px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .faq-question:hover {
+            background: #f0f0f0;
+        }
+
+        .faq-answer {
+            padding: 20px;
+            display: none;
+            border-top: 1px solid #ddd;
+        }
+
+        .faq-answer.active {
+            display: block;
+        }
+
+        .faq-toggle {
+            font-size: 20px;
+            transition: transform 0.3s;
+        }
+
+        .faq-item.active .faq-toggle {
+            transform: rotate(180deg);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .breadcrumb {
+            background: white;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+            margin-top: 60px;
+            font-size: 14px;
+        }
+
+        .last-updated {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: #26de81;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 28px;
+            }
+
+            h2 {
+                font-size: 22px;
+            }
+
+            table {
+                font-size: 13px;
+            }
+
+            th, td {
+                padding: 8px;
+            }
+        }
+
+        .toc {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .toc h4 {
+            margin-top: 0;
+        }
+
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .toc a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <header>
+        <h1>🔐 Política de Privacidade e LGPD</h1>
+        <p>LRP Gallery - Identificação Biométrica Responsável</p>
+    </header>
+
+    <!-- BREADCRUMB -->
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="/">Home</a> > <a href="/gallery">Galeria</a> > <strong>Privacidade</strong>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="container">
+        <!-- CONTATO URGENTE -->
+        <div class="contact-banner">
+            <div class="contact-item">
+                <div class="contact-icon">📧</div>
+                <div class="contact-info">
+                    <h3>EMAIL</h3>
+                    <p><a href="mailto:souleandroribeiro@gmail.com">souleandroribeiro@gmail.com</a></p>
+                </div>
+            </div>
+            <div class="contact-item">
+                <div class="contact-icon">📞</div>
+                <div class="contact-info">
+                    <h3>TELEFONE</h3>
+                    <p><a href="tel:+552198326-7661">+55 21 98326-7661</a></p>
+                </div>
+            </div>
+            <div class="contact-item">
+                <div class="contact-icon">🌐</div>
+                <div class="contact-info">
+                    <h3>PORTAL DE PRIVACIDADE</h3>
+                    <p><a href="https://www.souleandroribeiro.com.br/gallery/privacidade">www.souleandroribeiro.com.br/gallery/privacidade</a></p>
+                </div>
+            </div>
+            <div class="contact-item">
+                <div class="contact-icon">⏰</div>
+                <div class="contact-info">
+                    <h3>HORÁRIO DE ATENDIMENTO</h3>
+                    <p>Segunda a Sexta, 9h-18h</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ÍNDICE -->
+        <div class="toc">
+            <h4>📑 Índice de Conteúdo</h4>
+            <ul>
+                <li><a href="#resumo">1. Resumo Executivo</a></li>
+                <li><a href="#uso-imagens">2. Uso de Imagens Biométricas</a></li>
+                <li><a href="#lgpd">3. Conformidade LGPD</a></li>
+                <li><a href="#direitos">4. Seus Direitos</a></li>
+                <li><a href="#seguranca">5. Segurança de Dados</a></li>
+                <li><a href="#retencao">6. Retenção e Exclusão</a></li>
+                <li><a href="#direito-exercer">7. Como Exercer Seus Direitos</a></li>
+                <li><a href="#faq">8. Perguntas Frequentes</a></li>
+            </ul>
+        </div>
+
+        <!-- 1. RESUMO EXECUTIVO -->
+        <section id="resumo">
+            <h2>1. Resumo Executivo</h2>
+            <p>Bem-vindo à LRP Gallery! Esta página explica como coletamos, usamos e protegemos suas imagens biométricas (selfies) no aplicativo de reconhecimento facial para eventos corporativos e congressos.</p>
+
+            <div class="compliance-checklist">
+                <h4>✅ Conformidade com LGPD</h4>
+                <ul>
+                    <li>Consentimento prévio e informado</li>
+                    <li>Dados armazenados de forma segura (AES-256)</li>
+                    <li>Retenção limitada a 180 dias</li>
+                    <li>Exclusão automática garantida</li>
+                    <li>Todos os 6 direitos LGPD implementados</li>
+                    <li>Suporte 24/7 para exercer direitos</li>
+                </ul>
+            </div>
+
+            <p><strong>Data de Entrada em Vigor:</strong> 1º de janeiro de 2024</p>
+            <p><strong>Última Atualização:</strong> <span id="lastUpdate">7 de julho de 2026</span></p>
+        </section>
+
+        <!-- 2. USO DE IMAGENS BIOMÉTRICAS -->
+        <section id="uso-imagens">
+            <h2>2. Uso de Imagens Biométricas</h2>
+
+            <h3>2.1 O que é Dado Biométrico?</h3>
+            <p>Dados biométricos são características físicas ou comportamentais únicas de uma pessoa, como reconhecimento facial, impressão digital ou íris. No nosso caso, utilizamos <strong>reconhecimento facial através de selfies</strong>.</p>
+
+            <h3>2.2 Como Coletamos Suas Imagens</h3>
+            <ol>
+                <li><strong>Consentimento Prévio:</strong> Você recebe um modal informando exatamente como seus dados serão usados</li>
+                <li><strong>Captura Voluntária:</strong> Você tira uma selfie com seu próprio dispositivo</li>
+                <li><strong>Processamento Local (Opcional):</strong> A imagem pode ser processada no seu telefone antes de enviar</li>
+                <li><strong>Envio Seguro:</strong> Transmissão criptografada (TLS 1.3) para nossos servidores</li>
+                <li><strong>Armazenamento Seguro:</strong> Criptografia AES-256-GCM em repouso</li>
+            </ol>
+
+            <h3>2.3 Propósitos de Uso</h3>
+            <div class="info-box">
+                <h4>✓ AUTORIZADO - O que fazemos com sua selfie:</h4>
+                <ul>
+                    <li>Identificar suas fotos no álbum do evento</li>
+                    <li>Melhorar a precisão do algoritmo de reconhecimento facial</li>
+                    <li>Operações de segurança (prevenção de fraudes)</li>
+                    <li>Cumprir obrigações legais e regulatórias</li>
+                </ul>
+            </div>
+
+            <div class="highlight">
+                <h4>✗ PROIBIDO - O que NÃO fazemos:</h4>
+                <ul>
+                    <li>Compartilhar com terceiros</li>
+                    <li>Usar para marketing ou publicidade</li>
+                    <li>Vender seus dados</li>
+                    <li>Usar para vigilância ou rastreamento</li>
+                    <li>Combinar com outras bases de dados</li>
+                    <li>Usar para análise comportamental não autorizada</li>
+                </ul>
+            </div>
+
+            <h3>2.4 Tipos de Dados Coletados</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo de Dado</th>
+                        <th>Sensibilidade</th>
+                        <th>Armazenamento</th>
+                        <th>Retenção</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Selfie (imagem)</td>
+                        <td>🔴 CRÍTICA</td>
+                        <td>Criptografada</td>
+                        <td>180 dias</td>
+                    </tr>
+                    <tr>
+                        <td>Face embedding*</td>
+                        <td>🟠 ALTA</td>
+                        <td>Criptografada</td>
+                        <td>180 dias</td>
+                    </tr>
+                    <tr>
+                        <td>Timestamp</td>
+                        <td>🟢 BAIXA</td>
+                        <td>Log auditado</td>
+                        <td>2 anos</td>
+                    </tr>
+                    <tr>
+                        <td>IP/User-Agent</td>
+                        <td>🟡 MÉDIA</td>
+                        <td>Log auditado</td>
+                        <td>90 dias</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p style="font-size: 12px; color: #666;">*Face embedding = representação matemática do rosto (NÃO é a imagem original)</p>
+        </section>
+
+        <!-- 3. CONFORMIDADE LGPD -->
+        <section id="lgpd">
+            <h2>3. Conformidade LGPD <span class="status-badge">✅ CONFORME</span></h2>
+
+            <h3>3.1 Bases Legais para Processamento</h3>
+            <p>O processamento de seus dados biométricos é realizado com base em:</p>
+            <div class="info-box">
+                <h4>Lei Geral de Proteção de Dados (Lei 13.709/2018)</h4>
+                <ul>
+                    <li><strong>Art. 7, II:</strong> Consentimento livre, informado, específico e inequívoco</li>
+                    <li><strong>Art. 8:</strong> Autorização especial para tratamento de dados biométricos</li>
+                    <li><strong>Art. 7, VI:</strong> Interesse legítimo para operações de segurança</li>
+                </ul>
+            </div>
+
+            <h3>3.2 Princípios LGPD Respeitados</h3>
+            <div class="two-column">
+                <div class="rights-card">
+                    <strong>1. FINALIDADE</strong>
+                    Dados usados APENAS para reconhecimento facial no evento. Nenhum outro uso.
+                </div>
+                <div class="rights-card">
+                    <strong>2. ADEQUAÇÃO</strong>
+                    Mínimos dados necessários coletados. Apenas selfie, nada mais.
+                </div>
+                <div class="rights-card">
+                    <strong>3. TRANSPARÊNCIA</strong>
+                    Você sabe o QUÊ, COMO, QUANDO, POR QUÊ e QUEM tem acesso.
+                </div>
+                <div class="rights-card">
+                    <strong>4. SEGURANÇA</strong>
+                    Criptografia de ponta a ponta com padrões internacionais.
+                </div>
+                <div class="rights-card">
+                    <strong>5. LIVRE ACESSO</strong>
+                    Você pode acessar, corrigir, deletar ou portar seus dados.
+                </div>
+                <div class="rights-card">
+                    <strong>6. QUALIDADE</strong>
+                    Dados mantidos precisos e não obsoletos. Você controla.
+                </div>
+            </div>
+
+            <h3>3.3 Consentimento Prévio e Informado</h3>
+            <ol>
+                <li>Antes de qualquer processamento, você recebe um modal claro em português</li>
+                <li>Explica EXATAMENTE o que será feito com sua selfie</li>
+                <li>Você marca 3 checkboxes obrigatórios confirmando que:
+                    <ul>
+                        <li>Entende como seus dados serão usados</li>
+                        <li>Reconhece seus direitos LGPD</li>
+                        <li>Consente explicitamente com o processamento</li>
+                    </ul>
+                </li>
+                <li>Consentimento é registrado com timestamp, IP e user-agent</li>
+                <li>Você pode revogar a QUALQUER MOMENTO</li>
+            </ol>
+        </section>
+
+        <!-- 4. SEUS DIREITOS -->
+        <section id="direitos">
+            <h2>4. Seus Direitos LGPD</h2>
+            <p>A Lei Geral de Proteção de Dados garante a você 6 direitos fundamentais:</p>
+
+            <h3>4.1 Direito de Acesso (Art. 18)</h3>
+            <div class="rights-card">
+                <strong>O que é?</strong>
+                Você pode solicitar uma cópia de todos seus dados que temos.
+
+                <h4>O que você recebe:</h4>
+                <ul>
+                    <li>Cópia da sua selfie</li>
+                    <li>Data e hora de captura</li>
+                    <li>Propósito de uso</li>
+                    <li>Tempo de retenção</li>
+                    <li>Quem teve acesso</li>
+                </ul>
+
+                <h4>Como solicitar:</h4>
+                <p>Email: souleandroribeiro@gmail.com com assunto "Solicito Acesso a Meus Dados"</p>
+
+                <h4>Prazo:</h4>
+                <p>Resposta em até 15 dias úteis</p>
+            </div>
+
+            <h3>4.2 Direito de Correção (Art. 19)</h3>
+            <div class="rights-card">
+                <strong>O que é?</strong>
+                Se os dados estão imprecisos, você pode corrigi-los.
+
+                <h4>Exemplo:</h4>
+                <p>Se acha que a selfie não corresponde a você, você pode tirar uma nova.</p>
+
+                <h4>Como solicitar:</h4>
+                <p>Acesse o portal > "Atualizar Minha Selfie" ou email: souleandroribeiro@gmail.com</p>
+
+                <h4>Prazo:</h4>
+                <p>Processado em até 7 dias úteis</p>
+            </div>
+
+            <h3>4.3 Direito ao Esquecimento/Exclusão (Art. 17)</h3>
+            <div class="rights-card">
+                <strong>O que é?</strong>
+                Você pode solicitar a EXCLUSÃO COMPLETA de seus dados biométricos.
+
+                <h4>O que é deletado:</h4>
+                <ul>
+                    <li>✓ Sua selfie original</li>
+                    <li>✓ Face embedding (representação matemática)</li>
+                    <li>✓ Histórico de buscas</li>
+                    <li>✓ Consentimento registrado</li>
+                </ul>
+
+                <h4>O que NÃO é deletado:</h4>
+                <ul>
+                    <li>• Logs de auditoria (por lei, mantidos 2 anos)</li>
+                </ul>
+
+                <h4>Como solicitar:</h4>
+                <p>Portal > "Deletar Meu Rosto" ou email: souleandroribeiro@gmail.com</p>
+
+                <h4>Prazo:</h4>
+                <p>Execução em até 30 dias. Você recebe certificado de exclusão.</p>
+            </div>
+
+            <h3>4.4 Direito de Revogação (Art. 8)</h3>
+            <div class="rights-card">
+                <strong>O que é?</strong>
+                Você pode CANCELAR SEU CONSENTIMENTO A QUALQUER HORA.
+
+                <h4>O que acontece:</h4>
+                <ul>
+                    <li>Novas buscas por rosto são BLOQUEADAS imediatamente</li>
+                    <li>Serviço não funciona mais para você</li>
+                    <li>Dados já coletados são mantidos até fim da retenção</li>
+                </ul>
+
+                <h4>Depois:</h4>
+                <p>Você pode consentir novamente se desejar.</p>
+
+                <h4>Como revogar:</h4>
+                <p>1 clique no app ou email: souleandroribeiro@gmail.com com "Revogar Consentimento"</p>
+
+                <h4>Prazo:</h4>
+                <p>IMEDIATO - Revogação efetiva em tempo real</p>
+            </div>
+
+            <h3>4.5 Direito à Portabilidade (Art. 20)</h3>
+            <div class="rights-card">
+                <strong>O que é?</strong>
+                Você pode receber seus dados em formato aberto e portável.
+
+                <h4>O que você recebe:</h4>
+                <ul>
+                    <li>JSON estruturado com todos seus dados</li>
+                    <li>Metadados do consentimento</li>
+                    <li>Histórico de processamento</li>
+                    <li>Registros de exercício de direitos</li>
+                </ul>
+
+                <h4>Como solicitar:</h4>
+                <p>Portal > "Exportar Meus Dados" ou email: souleandroribeiro@gmail.com</p>
+
+                <h4>Prazo:</h4>
+                <p>Resposta em até 30 dias</p>
+            </div>
+
+            <h3>4.6 Direito de Oposição (Art. 21)</h3>
+            <div class="rights-card">
+                <strong>O que é?</strong>
+                Você pode recusar certos tipos de processamento.
+
+                <h4>Exemplo:</h4>
+                <p>Você pode recusar que sua selfie seja usada para melhorar o algoritmo.</p>
+
+                <h4>Como exercer:</h4>
+                <p>Email: souleandroribeiro@gmail.com com "Oponho ao Processamento de"</p>
+
+                <h4>Prazo:</h4>
+                <p>Análise em até 15 dias. Você será informado da decisão.</p>
+            </div>
+        </section>
+
+        <!-- 5. SEGURANÇA DE DADOS -->
+        <section id="seguranca">
+            <h2>5. Segurança de Dados</h2>
+
+            <h3>5.1 Criptografia</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Localização</th>
+                        <th>Método</th>
+                        <th>Padrão</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Em Trânsito (Internet)</td>
+                        <td>TLS 1.3</td>
+                        <td>Padrão IETF</td>
+                    </tr>
+                    <tr>
+                        <td>Em Repouso (Servidor)</td>
+                        <td>AES-256-GCM</td>
+                        <td>NIST Aprovado</td>
+                    </tr>
+                    <tr>
+                        <td>Gerenciamento de Chaves</td>
+                        <td>HSM (Hardware Security Module)</td>
+                        <td>FIPS 140-2 Nível 3</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>5.2 Controle de Acesso</h3>
+            <div class="info-box">
+                <h4>Como protegemos seu acesso:</h4>
+                <ul>
+                    <li>🔐 <strong>Autenticação Multi-Fator (MFA):</strong> Múltiplas formas de verificação</li>
+                    <li>🔐 <strong>Sessões Limitadas:</strong> Acesso administrativo expira após 1 hora</li>
+                    <li>🔐 <strong>IP Whitelisting:</strong> Apenas IPs autorizados acessam dados</li>
+                    <li>🔐 <strong>Role-Based Access:</strong> Cada pessoa vê apenas o necessário</li>
+                </ul>
+            </div>
+
+            <h3>5.3 Infraestrutura Segura</h3>
+            <div class="compliance-checklist">
+                <h4>Certificações e Conformidade:</h4>
+                <ul>
+                    <li>ISO 27001 (Segurança da Informação)</li>
+                    <li>SOC 2 Type II (Relatório de Conformidade)</li>
+                    <li>HIPAA Ready (Saúde/Privacidade)</li>
+                    <li>Data centers com redundância geográfica</li>
+                </ul>
+            </div>
+
+            <h3>5.4 Monitoramento e Detecção</h3>
+            <ul>
+                <li>✓ Monitoramento 24/7 de acessos anormais</li>
+                <li>✓ Alertas de segurança em tempo real</li>
+                <li>✓ Testes de penetração semestrais</li>
+                <li>✓ Auditorias de segurança anuais</li>
+                <li>✓ Plano de resposta a incidentes documentado</li>
+            </ul>
+
+            <h3>5.5 O Que Você Pode Fazer</h3>
+            <ul>
+                <li>Use senhas fortes e únicas para sua conta</li>
+                <li>Não compartilhe seu link de acesso</li>
+                <li>Faça logout depois de usar</li>
+                <li>Mantenha seu dispositivo protegido</li>
+                <li>Reporte qualquer atividade suspeita</li>
+            </ul>
+        </section>
+
+        <!-- 6. RETENÇÃO E EXCLUSÃO -->
+        <section id="retencao">
+            <h2>6. Retenção e Exclusão de Dados</h2>
+
+            <h3>6.1 Cronograma de Retenção</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo de Dado</th>
+                        <th>Período de Retenção</th>
+                        <th>Após Expiração</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Selfie e Face Embedding</td>
+                        <td>180 dias</td>
+                        <td>Deletada automaticamente</td>
+                    </tr>
+                    <tr>
+                        <td>Logs de Auditoria</td>
+                        <td>2 anos</td>
+                        <td>Deletada após 2 anos</td>
+                    </tr>
+                    <tr>
+                        <td>Registros de Consentimento</td>
+                        <td>1 ano</td>
+                        <td>Arquivado e deletado</td>
+                    </tr>
+                    <tr>
+                        <td>IP/User-Agent</td>
+                        <td>90 dias</td>
+                        <td>Deletado após 90 dias</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>6.2 Timeline de Exclusão Automática</h3>
+            <div class="info-box">
+                <h4>📅 Após o Evento:</h4>
+                <ul>
+                    <li><strong>Dias 1-180:</strong> Sua selfie está armazenada e acessível</li>
+                    <li><strong>Dia 150:</strong> Você recebe email: "Seus dados serão deletados em 30 dias"</li>
+                    <li><strong>Dia 180:</strong> Exclusão automática iniciada</li>
+                    <li><strong>Dia 182:</strong> Confirmação de exclusão enviada por email</li>
+                </ul>
+            </div>
+
+            <h3>6.3 Você Pode Acelerar a Exclusão</h3>
+            <p>Não quer esperar 180 dias? Sem problema:</p>
+            <ol>
+                <li>Acesse o portal de privacidade</li>
+                <li>Clique em "Deletar Meu Rosto"</li>
+                <li>Confirme sua identidade</li>
+                <li>Confirmação de exclusão é enviada em 24-48 horas</li>
+            </ol>
+
+            <h3>6.4 Exclusão por Revogação</h3>
+            <p>Se você revogar o consentimento:</p>
+            <ul>
+                <li>Novas buscas são bloqueadas IMEDIATAMENTE</li>
+                <li>Dados existentes seguem cronograma normal (180 dias)</li>
+                <li>Você pode solicitar exclusão imediata</li>
+            </ul>
+        </section>
+
+        <!-- 7. COMO EXERCER DIREITOS -->
+        <section id="direito-exercer">
+            <h2>7. Como Exercer Seus Direitos</h2>
+
+            <h3>7.1 Portal Online (Mais Rápido)</h3>
+            <p><strong>Acesse:</strong> <a href="https://www.souleandroribeiro.com.br/gallery/privacidade">www.souleandroribeiro.com.br/gallery/privacidade</a></p>
+            <p>O portal oferece auto-atendimento para:</p>
+            <ul>
+                <li>Acessar seus dados</li>
+                <li>Atualizar sua selfie</li>
+                <li>Deletar seu rosto</li>
+                <li>Revogar consentimento</li>
+                <li>Exportar dados</li>
+            </ul>
+
+            <h3>7.2 Email</h3>
+            <p><strong>Envie para:</strong> <a href="mailto:souleandroribeiro@gmail.com">souleandroribeiro@gmail.com</a></p>
+            <p><strong>Assuntos disponíveis:</strong></p>
+            <ul>
+                <li>"Solicito Acesso a Meus Dados" (Direito de Acesso)</li>
+                <li>"Desejo Atualizar Minha Selfie" (Direito de Correção)</li>
+                <li>"Solicito Exclusão de Meus Dados" (Direito ao Esquecimento)</li>
+                <li>"Revogar Consentimento" (Direito de Revogação)</li>
+                <li>"Solicito Portabilidade de Dados" (Direito à Portabilidade)</li>
+                <li>"Oponho ao Processamento de [especificar]" (Direito de Oposição)</li>
+            </ul>
+
+            <h3>7.3 Telefone</h3>
+            <p><strong>Ligue para:</strong> <a href="tel:+552198326-7661">+55 21 98326-7661</a></p>
+            <p><strong>Horário:</strong> Segunda a Sexta, 9h-18h</p>
+
+            <h3>7.4 Prazos de Resposta</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo de Solicitação</th>
+                        <th>Prazo Legal</th>
+                        <th>Nosso Prazo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Direito de Acesso</td>
+                        <td>15 dias úteis</td>
+                        <td>Até 10 dias úteis</td>
+                    </tr>
+                    <tr>
+                        <td>Direito de Correção</td>
+                        <td>Sem prazo definido</td>
+                        <td>Até 7 dias úteis</td>
+                    </tr>
+                    <tr>
+                        <td>Direito ao Esquecimento</td>
+                        <td>Até 30 dias</td>
+                        <td>Até 20 dias úteis</td>
+                    </tr>
+                    <tr>
+                        <td>Direito de Revogação</td>
+                        <td>Imediato</td>
+                        <td>Imediato (1-4 horas)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>7.5 Formulário Padrão</h3>
+            <div class="info-box">
+                <h4>Se não sabe o que enviar, use este modelo:</h4>
+                <p style="background: #f0f0f0; padding: 15px; border-radius: 6px; font-family: monospace;">
+                    Assunto: [Escolha acima]<br><br>
+                    Prezados Responsáveis,<br><br>
+                    Solicito [Acesso/Correção/Exclusão/Revogação] de meus dados biométricos conforme Art. [número] da LGPD.<br><br>
+                    Meu email: [seu email]<br>
+                    Meu telefone: [seu telefone]<br><br>
+                    Agradeço a atenção.<br>
+                    [Seu nome]
+                </p>
+            </div>
+
+            <h3>7.6 Direito a Recurso</h3>
+            <p>Se não estiver satisfeito com nossa resposta, você pode:</p>
+            <ul>
+                <li>📧 Enviar recurso para: souleandroribeiro@gmail.com com "RECURSO - [motivo]"</li>
+                <li>🏛️ Denunciar à ANPD (Autoridade Nacional de Proteção de Dados) em www.gov.br/cidadania/pt-br/acesso-a-informacao/lgpd</li>
+            </ul>
+        </section>
+
+        <!-- 8. PERGUNTAS FREQUENTES -->
+        <section id="faq">
+            <h2>8. Perguntas Frequentes (FAQ)</h2>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Minha selfie será salva no meu telefone?</span>
+                    <span class="faq-toggle">▼</span>
+                </div>
+                <div class="faq-answer">
+                    A selfie pode ser processada no seu telefone para melhor privacidade, mas é enviada aos nossos servidores seguros para reconhecimento facial. Você controla se mantém uma cópia local.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Por quanto tempo minha selfie fica armazenada?</span>
+                    <span class="faq-toggle">▼</span>
+                </div>
+                <div class="faq-answer">
+                    180 dias (6 meses) a partir do dia do evento. Você recebe notificação 30 dias antes de ser deletada. Pode solicitar exclusão imediata a qualquer momento.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Vocês compartilham minha selfie com terceiros?</span>
+                    <span class="faq-toggle">▼</span>
+                </div>
+                <div class="faq-answer">
+                    NÃO. Nunca compartilhamos dados biométricos com terceiros. A selfie é usada APENAS para sua busca de fotos no evento.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Como meus dados são protegidos?</span>
+                    <span class="faq-toggle">▼</span>
+                </div>
+                <div class="faq-answer">
+                    Usamos criptografia AES-256-GCM, autenticação multi-fator, data centers certificados ISO 27001, e monitoramento 24/7. Seus dados são algumas das informações mais protegidas que temos.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Posso deletar minha selfie antes de 180 dias?</span>
+                    <span class="faq-toggle">▼</span>
+                </div>
+                <div class="faq-answer">
+                    Sim! Você pode solicitar exclusão imediata a qualquer momento. Acesse o portal, clique em "Deletar Meu Rosto" ou envie email. Será deletada em até 30 dias.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>O que é face embedding?</span>
+                    <span class="faq-toggle">▼</span>
+                </div>
+                <div class="faq-answer">
+                    É uma representação matemática do seu rosto (números, não a imagem). A partir do face embedding, é IMPOSSÍVEL reconstruir sua selfie. É como uma senha do seu rosto.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Vocês usam AI/Machine Learning com minha selfie?</span>
+                    <span class="faq-toggle">▼</span>
+                </div>
+                <div class="faq-answer">
+                    Sim, para melhorar a precisão do reconhecimento facial. VOCÊ PODE RECUSAR ISSO durante o consentimento ou exercendo seu Direito de Oposição.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>E se eu não consentir?</span>
+                    <span class="faq-toggle">▼</span>
+                </div>
+                <div class="faq-answer">
+                    Sem consentimento, você não pode usar o recurso de busca por rosto. Mas pode: (1) visualizar fotos manualmente, (2) consentir depois, (3) usar o álbum normalmente.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Como exerço meu direito de revogação?</span>
+                    <span class="faq-toggle">▼</span>
+                </div>
+                <div class="faq-answer">
+                    1 clique no app ("Configurações" > "Revogar Consentimento") ou envie email. Efetivo IMEDIATAMENTE. Você pode consentir novamente depois se desejar.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>Qual é seu Encarregado de Proteção de Dados (DPO)?</span>
+                    <span class="faq-toggle">▼</span>
+                </div>
+                <div class="faq-answer">
+                    Leandro Ribeiro (DPO - Data Protection Officer). Contato: souleandroribeiro@gmail.com. Ele é responsável por garantir conformidade LGPD em todos os processos.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFAQ(this)">
+                    <span>O que fazer se meus dados foram vazados?</span>
+                    <span class="faq-toggle">▼</span>
+                </div>
+                <div class="faq-answer">
+                    Contato IMEDIATO: souleandroribeiro@gmail.com com "VAZAMENTO DE DADOS". Investigaremos, notificaremos você e a ANPD conforme lei. Você será atualizado diariamente.
+                </div>
+            </div>
+        </section>
+
+        <!-- FORMULÁRIO DE CONTATO -->
+        <section>
+            <h2>Formulário de Contato Rápido</h2>
+            <p>Prefere enviar pelo site? Preencha abaixo:</p>
+
+            <form onsubmit="handleSubmit(event)">
+                <div class="form-group">
+                    <label for="name">Seu Nome *</label>
+                    <input type="text" id="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Seu Email *</label>
+                    <input type="email" id="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="type">Tipo de Solicitação *</label>
+                    <select id="type" required>
+                        <option value="">Selecione...</option>
+                        <option value="access">Direito de Acesso (Art. 18)</option>
+                        <option value="correction">Direito de Correção (Art. 19)</option>
+                        <option value="deletion">Direito ao Esquecimento (Art. 17)</option>
+                        <option value="revocation">Direito de Revogação (Art. 8)</option>
+                        <option value="portability">Direito à Portabilidade (Art. 20)</option>
+                        <option value="opposition">Direito de Oposição (Art. 21)</option>
+                        <option value="other">Outra Solicitação</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Sua Mensagem *</label>
+                    <textarea id="message" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <input type="checkbox" id="agree" required>
+                    <label for="agree" style="display: inline; margin-left: 8px;">Confirmo que li e aceito a Política de Privacidade</label>
+                </div>
+
+                <button type="submit">Enviar Solicitação</button>
+            </form>
+        </section>
+
+        <!-- RODAPÉ -->
+        <section>
+            <div class="last-updated">
+                <strong>Última Atualização:</strong> 7 de julho de 2026<br>
+                <strong>Próxima Revisão:</strong> 7 de janeiro de 2027<br>
+                <strong>Versão:</strong> 1.0
+            </div>
+        </section>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <p>&copy; 2024-2026 LRP Gallery | Todos os direitos reservados</p>
+        <p>Leandro Ribeiro - Fotografia e Produção de Conteúdo</p>
+        <p><a href="mailto:souleandroribeiro@gmail.com" style="color: white;">souleandroribeiro@gmail.com</a> |
+           <a href="tel:+552198326-7661" style="color: white;">+55 21 98326-7661</a></p>
+        <p style="margin-top: 20px; font-size: 12px;">
+            Política de Privacidade conforme Lei Geral de Proteção de Dados (Lei 13.709/2018)<br>
+            Em conformidade com LGPD e GDPR
+        </p>
+    </footer>
+
+    <script>
+        function toggleFAQ(element) {
+            const item = element.parentElement;
+            const answer = item.querySelector('.faq-answer');
+
+            item.classList.toggle('active');
+            answer.classList.toggle('active');
+        }
+
+        function handleSubmit(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const type = document.getElementById('type').value;
+            const message = document.getElementById('message').value;
+
+            const mailtoLink = `mailto:souleandroribeiro@gmail.com?subject=Solicitação LGPD - ${type}&body=Nome: ${name}%0AEmail: ${email}%0A%0AMensagem:%0A${message}`;
+
+            window.location.href = mailtoLink;
+        }
+
+        // Atualizar data automaticamente
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString('pt-BR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    </script>
+</body>
+</html>

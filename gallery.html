@@ -4,9 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Galeria · @eusouleandroribeiro</title>
+<meta name="description" content="Galeria de fotos por @eusouleandroribeiro">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="@eusouleandroribeiro">
+<meta property="og:title" id="og-title" content="Galeria · @eusouleandroribeiro">
+<meta property="og:description" content="Veja as fotos do evento">
+<meta property="og:image" id="og-image" content="">
+<meta property="og:url" id="og-url" content="">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" id="tw-title" content="Galeria · @eusouleandroribeiro">
+<meta name="twitter:image" id="tw-image" content="">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase-config.js"></script>
+<script src="gallery-utils.js"></script>
+<script src="gallery-facial.js"></script>
+<script src="gallery-paywall.js"></script>
+<script src="gallery-selection.js"></script>
+<script src="gallery-gate.js"></script>
+<script src="gallery-consent-lgpd.js"></script>
+<script src="gallery-email-sendgrid.js"></script>
+<script src="gallery-tutorial.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
@@ -41,10 +62,48 @@ body {
   pointer-events: none;
 }
 
+/* Mobile: esconde a barra de PERSONALIZAÇÃO (foto/espaço/fundo), mantendo
+   favoritos e download. Foco em ver e baixar. */
+@media (max-width: 768px) {
+  .bar-center { display: none !important; }
+}
+
+/* ── BANNER DE MARCA (aparece após a capa, antes das fotos) ── */
+#intro-brand {
+  position: relative; padding: 58px 22px; min-height: 300px;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  text-align: center; color: #fff; overflow: hidden;
+  background-color: #0a0a0a; background-size: cover; background-position: center;
+}
+#intro-brand::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.8));
+}
+#intro-brand > * { position: relative; z-index: 1; }
+#intro-brand .ib-name {
+  font-family: 'Oswald', sans-serif; font-weight: 700; text-transform: uppercase;
+  font-size: clamp(1.9rem, 6vw, 3.2rem); letter-spacing: .04em; line-height: 1;
+}
+#intro-brand .ib-tag {
+  font-family: 'Barlow', sans-serif; color: #dcdcdc; margin-top: 10px;
+  font-size: clamp(.92rem, 2.6vw, 1.12rem); letter-spacing: .02em;
+}
+#intro-brand .ib-tag b { color: #FF6A00; font-weight: 600; }
+#intro-brand .ib-links { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 22px; }
+#intro-brand .ib-btn {
+  padding: 11px 20px; border-radius: 999px; font-family: 'Oswald', sans-serif;
+  font-weight: 600; text-transform: uppercase; letter-spacing: .06em; font-size: .8rem;
+  text-decoration: none; border: 1.5px solid rgba(255,255,255,.5); color: #fff; transition: all .2s;
+}
+#intro-brand .ib-btn:hover { background: #FF6A00; border-color: #FF6A00; color: #000; }
+#intro-brand .ib-btn.primary { background: #FF6A00; border-color: #FF6A00; color: #000; }
+#intro-brand .ib-btn.primary:hover { background: #ff7d22; }
+@media (max-width: 700px) { #intro-brand { padding: 44px 18px; min-height: 260px; } }
+
 .logo-wrap { display: flex; flex-direction: column; line-height: 1.15; }
 
 .logo-name {
-  font-family: 'Big Shoulders Display', sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-size: 1.05rem; font-weight: 900;
   letter-spacing: 0.06em; color: #1a1a1a;
   text-transform: uppercase; transition: color 0.35s;
@@ -110,7 +169,7 @@ body.bg-dark .bar-btn-primary:hover { background: #d0e838; }
 }
 
 .cover-title {
-  font-family: 'Big Shoulders Display', sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-size: clamp(1.9rem, 9vw, 6rem);
   font-weight: 900;
   color: #fff; letter-spacing: 0.05em; text-transform: uppercase;
@@ -143,7 +202,7 @@ body.bg-dark .bar-btn-primary:hover { background: #d0e838; }
   display: flex; align-items: center; justify-content: flex-start;
   gap: 28px; padding: 18px 24px 14px;
   overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
-  position: sticky; top: 0; z-index: 150;
+  position: sticky; top: 56px; z-index: 150;
   background: var(--bg, #fff); transition: background 0.35s;
 }
 #group-tabs::-webkit-scrollbar { display: none; }
@@ -166,12 +225,9 @@ body.bg-dark .group-tab.active { color: #f3f3f3; border-bottom-color: #f3f3f3; }
 /* Layout justificado (estilo Pixellu): linhas de altura igual,
    larguras exatas calculadas pela proporção de cada foto — sem cortes */
 .masonry {
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 4px;
+  position: relative;
   padding: 4px;
-  transition: gap 0.25s, padding 0.25s;
+  transition: padding 0.25s;
 }
 
 /* Moldura: mat ao redor de cada foto */
@@ -438,7 +494,7 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
 #drawer.open #drawer-panel { transform: translateX(0); }
 
 .drawer-item {
-  font-family: 'Big Shoulders Display', sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-size: 1.2rem; font-weight: 800; color: #1a1a1a;
   letter-spacing: 0.1em; text-transform: uppercase;
   padding: 12px 0; border-bottom: 1px solid #f0f0f0;
@@ -454,7 +510,7 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
 .drawer-close svg { width: 20px; height: 20px; stroke: #888; fill: none; stroke-width: 1.6; }
 
 /* ── TOAST ── */
-#toast {
+#toast-box {
   position: fixed; bottom: 72px; left: 50%;
   transform: translateX(-50%) translateY(6px);
   background: #1a1a1a; color: #fff; font-size: 0.68rem;
@@ -462,7 +518,22 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
   opacity: 0; transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
   pointer-events: none; white-space: nowrap; z-index: 999;
 }
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast-box.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Barra de ações dos resultados faciais */
+#facial-actions {
+  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; z-index: 1500;
+  background: #1a1a1a; color: #fff; padding: 8px 10px 8px 16px;
+  border-radius: 30px; box-shadow: 0 8px 30px rgba(0,0,0,.35);
+  max-width: 94vw; flex-wrap: nowrap;
+}
+#facial-actions-txt { font-size: .72rem; letter-spacing: .02em; margin-right: 4px; white-space: nowrap; }
+.fa-btn { border: none; border-radius: 20px; font-size: .72rem; font-weight: 700; padding: 8px 13px; cursor: pointer; white-space: nowrap; }
+.fa-btn.fav { background: #fff; color: #111; }
+.fa-btn.sel { background: #333; color: #fff; }
+.fa-btn.x   { background: transparent; color: #888; padding: 8px 6px; font-weight: 400; }
+@media (max-width: 460px) { #facial-actions-txt { display: none; } }
 
 /* ── PASSWORD GATE ── */
 #pw-gate, #expired-gate {
@@ -481,7 +552,7 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
   stroke: #888; fill: none; stroke-width: 1.6;
 }
 #pw-gallery-name {
-  font-family: 'Big Shoulders Display', sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-size: 1.5rem; font-weight: 900; letter-spacing: 0.06em;
   color: #111; margin-bottom: 6px; word-break: break-word;
 }
@@ -510,13 +581,286 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
 #pw-btn:hover { background: #333; }
 #pw-error { color: #e04444; font-size: 0.75rem; margin-top: 10px; min-height: 18px; }
 
+/* Modal de seleção do cliente */
+#sel-gate {
+  position: fixed; inset: 0; z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.88); backdrop-filter: blur(12px);
+}
+#sel-box {
+  position: relative; background: #fff; border-radius: 16px;
+  padding: 38px 34px 32px; max-width: 400px; width: 90%;
+  text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+#sel-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.5rem; font-weight: 900; letter-spacing: 0.06em; color: #111; margin-bottom: 8px;
+}
+#sel-sub { font-size: 0.82rem; color: #888; margin-bottom: 22px; line-height: 1.5; }
+#sel-sub b { color: #111; }
+.sel-input {
+  width: 100%; padding: 11px 14px; font-size: 0.9rem; box-sizing: border-box;
+  border: 1.5px solid #ddd; border-radius: 8px; outline: none; margin-bottom: 12px;
+  font-family: inherit; resize: vertical; transition: border-color 0.2s;
+}
+.sel-input:focus { border-color: #333; }
+#sel-btn {
+  width: 100%; padding: 12px; background: #111; color: #fff; border: none; border-radius: 8px;
+  font-size: 0.85rem; font-weight: 600; cursor: pointer; letter-spacing: 0.04em; transition: background 0.2s;
+}
+#sel-btn:hover { background: #333; }
+#sel-btn:disabled { background: #999; cursor: default; }
+#sel-error { font-size: 0.75rem; margin-top: 10px; min-height: 18px; }
+
+/* Modal facial (consentimento + câmera) */
+#facial-gate {
+  position: fixed; inset: 0; z-index: 2100;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.9); backdrop-filter: blur(12px); padding: 16px;
+}
+#facial-box {
+  position: relative; background: #fff; border-radius: 20px;
+  max-width: 380px; width: 100%; padding: 34px 30px 28px;
+  text-align: center; color: #111; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  max-height: 92vh; overflow-y: auto;
+}
+#facial-title, #facial-cam-title {
+  font-family: 'Oswald', sans-serif; font-weight: 900;
+  font-size: 1.55rem; letter-spacing: .04em; line-height: 1.05;
+}
+#facial-sub { font-size: .82rem; color: #777; margin: 10px 0 20px; line-height: 1.5; }
+.facial-points { text-align: left; display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.facial-points > div { display: flex; gap: 11px; align-items: flex-start; }
+.facial-points span:first-child { font-size: 1.05rem; line-height: 1.2; }
+.facial-points span:last-child { font-size: .78rem; color: #333; line-height: 1.45; }
+#facial-check-row {
+  display: flex; gap: 9px; align-items: flex-start; text-align: left;
+  background: #f7f6f4; border-radius: 10px; padding: 12px 13px; cursor: pointer; margin-bottom: 16px;
+}
+#facial-check-row input { margin-top: 2px; width: 16px; height: 16px; accent-color: #111; flex-shrink: 0; }
+#facial-check-row span { font-size: .76rem; color: #222; line-height: 1.45; }
+#facial-go, #facial-capture {
+  width: 100%; padding: 13px; background: #111; color: #fff; border: none; border-radius: 10px;
+  font-size: .85rem; font-weight: 700; letter-spacing: .03em; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+#facial-go:disabled, #facial-capture:disabled { background: #bbb; cursor: default; }
+#facial-fine { font-size: .64rem; color: #aaa; margin-top: 13px; line-height: 1.5; }
+#facial-video-wrap {
+  width: 220px; height: 220px; margin: 16px auto; border-radius: 50%;
+  overflow: hidden; background: #000; border: 3px solid #111;
+}
+#facial-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+#facial-status { font-size: .8rem; color: #777; margin-bottom: 16px; min-height: 20px; }
+#facial-review-count { font-size: .74rem; color: #888; margin-top: 6px; }
+#facial-review-img, #facial-review-canvas { width: 100%; max-height: 44vh; object-fit: contain; background: #000; border-radius: 12px; margin: 12px 0; }
+#facial-review-btns { display: flex; gap: 10px; }
+.facial-ans { flex: 1; padding: 13px; border: none; border-radius: 10px; font-size: .84rem; font-weight: 700; cursor: pointer; }
+.facial-ans.yes { background: #111; color: #fff; }
+.facial-ans.no  { background: #f0efec; color: #333; }
+#facial-remember-row { display: flex; gap: 9px; align-items: flex-start; text-align: left; margin: 16px 0 6px; cursor: pointer; }
+#facial-remember-row input { margin-top: 2px; width: 15px; height: 15px; accent-color: #111; flex-shrink: 0; }
+#facial-remember-row span { font-size: .72rem; color: #666; line-height: 1.4; }
+#facial-see { width: 100%; padding: 11px; background: none; color: #111; border: 1.5px solid #ddd; border-radius: 10px; font-size: .82rem; font-weight: 600; cursor: pointer; }
+#facial-see:hover { border-color: #111; }
+
 /* ── EXPIRED GATE ── */
 #expired-title {
-  font-family: 'Big Shoulders Display', sans-serif;
+  font-family: 'Oswald', sans-serif;
   font-size: 1.8rem; font-weight: 900; letter-spacing: 0.06em;
   color: #111; margin-bottom: 10px;
 }
 #expired-icon { stroke: #bbb; }
+
+/* ── CONSENT MODAL LGPD ── */
+#lgpd-consent-modal {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6); display: none;
+  justify-content: center; align-items: center;
+  z-index: 1000; padding: 20px;
+}
+
+#lgpd-consent-modal.show { display: flex; }
+
+.lgpd-modal {
+  background: white; border-radius: 20px;
+  max-width: 600px; max-height: 85vh;
+  overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.lgpd-modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white; padding: 30px; text-align: center;
+  border-radius: 20px 20px 0 0;
+}
+
+.lgpd-modal-header h2 { font-size: 24px; margin-bottom: 8px; }
+.lgpd-modal-header p { font-size: 14px; opacity: 0.9; }
+
+.lgpd-modal-content {
+  padding: 30px; display: flex;
+  flex-direction: column; gap: 20px;
+}
+
+.lgpd-consent-section {
+  border-bottom: 1px solid #f0f0f0; padding-bottom: 20px;
+}
+
+.lgpd-consent-section h3 {
+  color: #333; font-size: 16px; margin-bottom: 12px;
+}
+
+.lgpd-consent-section p {
+  color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 12px;
+}
+
+.lgpd-consent-list {
+  background: #f9f9f9; padding: 12px;
+  border-radius: 8px; font-size: 13px; color: #555; line-height: 1.6;
+}
+
+.lgpd-data-retention {
+  background: #fff3cd; border: 1px solid #ffc107;
+  padding: 15px; border-radius: 8px;
+  font-size: 13px; color: #856404; line-height: 1.6;
+}
+
+.lgpd-checkbox-group {
+  background: #f0f7ff; padding: 20px; border-radius: 12px; margin: 20px 0;
+}
+
+.lgpd-checkbox-item {
+  display: flex; gap: 12px; margin-bottom: 15px;
+}
+
+.lgpd-checkbox-item:last-child { margin-bottom: 0; }
+
+.lgpd-checkbox-item input[type="checkbox"] {
+  width: 20px; height: 20px; cursor: pointer;
+  margin-top: 2px; accent-color: #667eea; flex-shrink: 0;
+}
+
+.lgpd-checkbox-item label {
+  cursor: pointer; flex: 1; font-size: 14px;
+  color: #333; line-height: 1.5;
+}
+
+.lgpd-required-text {
+  color: #ff6b6b; font-size: 12px;
+  text-align: center; margin-top: 10px;
+}
+
+.lgpd-modal-footer {
+  padding: 30px; border-top: 1px solid #f0f0f0;
+  display: flex; gap: 12px;
+}
+
+.lgpd-btn {
+  flex: 1; padding: 14px 20px; border: none;
+  border-radius: 12px; font-size: 16px; font-weight: 600;
+  cursor: pointer; transition: all 0.3s;
+}
+
+.lgpd-btn-reject {
+  background: #f5f5f5; color: #333; border: 1px solid #ddd;
+}
+
+.lgpd-btn-reject:hover { background: #e8e8e8; }
+
+.lgpd-btn-accept {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white; flex: 2;
+}
+
+.lgpd-btn-accept:hover {
+  transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102,126,234,0.3);
+}
+
+.lgpd-btn-accept:disabled {
+  opacity: 0.5; cursor: not-allowed; transform: none;
+}
+
+.lgpd-privacy-link {
+  color: #667eea; text-decoration: none; font-weight: 600;
+}
+
+.lgpd-privacy-link:hover { text-decoration: underline; }
+
+/* ── TUTORIAL MODAL ── */
+#tutorial-modal {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7); display: none;
+  justify-content: center; align-items: center;
+  z-index: 999; padding: 20px;
+}
+
+#tutorial-modal.show { display: flex; }
+
+.tutorial-container {
+  background: #0a0a0a; color: #fff; border: 1px solid #1f1f1f;
+  border-radius: 16px; max-width: 640px; max-height: 85vh;
+  overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  animation: slideUp 0.3s ease-out;
+}
+
+.tutorial-header {
+  padding: 40px 32px 24px; text-align: center;
+  border-bottom: 1px solid #1f1f1f;
+}
+
+.tutorial-header h1 { font-size: 28px; margin-bottom: 10px; color: #fff; font-weight: 800; letter-spacing: .5px; }
+.tutorial-header p { font-size: 15px; color: #9a9a9a; }
+
+.tutorial-content {
+  padding: 32px; display: flex;
+  flex-direction: column; gap: 24px;
+}
+
+.tutorial-feature { display: block; }
+
+.tutorial-text h3 { color: #fff; font-size: 17px; margin-bottom: 6px; font-weight: 700; }
+.tutorial-text p { color: #b8b8b8; font-size: 14px; line-height: 1.6; }
+.tutorial-text b, .tutorial-text .hl { color: #FF6A00; font-weight: 700; }
+
+.tutorial-footer {
+  padding: 24px 32px 32px; border-top: 1px solid #1f1f1f;
+  display: flex; gap: 12px; justify-content: center;
+}
+
+.tutorial-btn {
+  padding: 13px 24px; border: none;
+  border-radius: 10px; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all .2s; letter-spacing: .3px;
+}
+
+.tutorial-btn-skip {
+  background: transparent; color: #fff; border: 1px solid #333;
+}
+
+.tutorial-btn-skip:hover { background: #161616; }
+
+.tutorial-btn-got-it {
+  background: #FF6A00; color: #000; flex: 1;
+}
+
+.tutorial-btn-got-it:hover { background: #ff7d22; }
+
+.tutorial-dots {
+  display: flex; gap: 8px; justify-content: center; margin-top: 6px;
+}
+
+.tutorial-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #333;
+}
+
+.tutorial-dot.active { background: #FF6A00; width: 22px; border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -542,6 +886,16 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
 </section>
 
 <!-- GRID -->
+<div id="intro-brand" style="background-image:url('https://www.souleandroribeiro.com.br/og.jpg')">
+  <div class="ib-name">Leandro Ribeiro</div>
+  <div class="ib-tag"><b>O fotógrafo</b> dos seus eventos</div>
+  <div class="ib-links">
+    <a class="ib-btn" href="https://instagram.com/eusouleandroribeiro" target="_blank" rel="noopener">Instagram</a>
+    <a class="ib-btn primary" href="https://wa.me/5521983267661" target="_blank" rel="noopener">WhatsApp</a>
+    <a class="ib-btn" href="https://www.souleandroribeiro.com.br" target="_blank" rel="noopener">Portfólio</a>
+  </div>
+</div>
+
 <div id="grid-section">
   <nav id="group-tabs" style="display:none"></nav>
   <div class="masonry size-md gap-md" id="masonry"></div>
@@ -663,6 +1017,89 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
   </div>
 </div>
 
+<!-- SELECTION MODAL -->
+<div id="sel-gate" style="display:none">
+  <div id="sel-box">
+    <button class="drawer-close" style="position:absolute;top:14px;right:14px" onclick="closeSelection()">
+      <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:#888;fill:none;stroke-width:2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div id="sel-title">ENVIAR SELEÇÃO</div>
+    <div id="sel-sub">Suas <b><span id="sel-count">0</span> fotos favoritas</b> serão enviadas ao fotógrafo.</div>
+    <input type="text" id="sel-name" class="sel-input" placeholder="Seu nome" maxlength="120">
+    <input type="text" id="sel-contact" class="sel-input" placeholder="WhatsApp ou e-mail (opcional)" maxlength="160">
+    <textarea id="sel-message" class="sel-input" rows="3" placeholder="Mensagem (opcional)" maxlength="1000"></textarea>
+    <button id="sel-btn" onclick="submitSelection()">Enviar seleção</button>
+    <div id="sel-error"></div>
+  </div>
+</div>
+
+<!-- FACIAL: CONSENTIMENTO + CÂMERA -->
+<div id="facial-gate" style="display:none">
+  <div id="facial-box">
+    <button class="drawer-close" style="position:absolute;top:14px;right:14px" onclick="closeFacial()">
+      <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:#888;fill:none;stroke-width:2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+
+    <!-- Passo 1: consentimento -->
+    <div id="facial-consent">
+      <svg viewBox="0 0 120 120" width="104" height="104" style="margin-bottom:12px" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="30" y="14" width="60" height="92" rx="12" fill="#f3f2ef" stroke="#111" stroke-width="2.5"/>
+        <circle cx="60" cy="52" r="17" fill="#fff" stroke="#111" stroke-width="2.5"/>
+        <circle cx="53" cy="49" r="2.4" fill="#111"/><circle cx="67" cy="49" r="2.4" fill="#111"/>
+        <path d="M52 59 q8 6 16 0" fill="none" stroke="#111" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M42 92 q18 -16 36 0" fill="none" stroke="#111" stroke-width="2.5" stroke-linecap="round"/>
+        <g transform="translate(78 74)"><path d="M11 0 L22 5 V13 C22 21 17 26 11 29 C5 26 0 21 0 13 V5 Z" fill="#111"/><path d="M6.5 14.5 l3 3 l6 -7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+        <path d="M96 30 l1.6 4 l4 1.6 l-4 1.6 l-1.6 4 l-1.6 -4 l-4 -1.6 l4 -1.6 Z" fill="#111"/>
+      </svg>
+      <div id="facial-title">ENCONTRE VOCÊ<br>NAS FOTOS</div>
+      <div id="facial-sub">Tire uma selfie e nós mostramos<br>as fotos em que você aparece.</div>
+      <div class="facial-points">
+        <div><span>🔒</span><span><b>No seu aparelho.</b> A selfie é processada aqui e <b>não é enviada</b> a nenhum servidor.</span></div>
+        <div><span>🗑️</span><span><b>Sem armazenar.</b> Sua selfie é descartada logo após a busca.</span></div>
+        <div><span>🧬</span><span><b>Só para isso.</b> Usada apenas para encontrar as suas fotos neste álbum.</span></div>
+      </div>
+      <label id="facial-check-row">
+        <input type="checkbox" id="facial-consent-check">
+        <span>Li e <b>concordo</b> com o uso da minha selfie para esta busca.</span>
+      </label>
+      <button id="facial-go" onclick="facialConsentContinue()" disabled>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Tirar selfie e buscar
+      </button>
+      <div id="facial-fine">Consentimento conforme a <b>LGPD</b> (Lei 13.709/2018). Sua selfie não é enviada nem salva.<br>Você pode ver todas as fotos sem usar este recurso. <a href="privacy.html" target="_blank" style="color:#111">Política de privacidade</a>.</div>
+      <div id="facial-saved-note" style="display:none;font-size:.68rem;color:#888;margin-top:8px">
+        🔒 Você tem um rosto salvo neste aparelho. <a href="#" onclick="forgetFace(event)" style="color:#111;text-decoration:underline">esquecer</a>
+      </div>
+    </div>
+
+    <!-- Passo 2: câmera / progresso -->
+    <div id="facial-camera" style="display:none">
+      <div id="facial-cam-title">POSICIONE SEU ROSTO</div>
+      <div id="facial-video-wrap"><video id="facial-video" autoplay playsinline muted></video></div>
+      <div id="facial-status">Preparando a câmera...</div>
+      <button id="facial-capture" onclick="facialCapture()" disabled>Buscar minhas fotos</button>
+      <canvas id="facial-canvas" style="display:none"></canvas>
+    </div>
+
+    <!-- Passo 3: revisão (aprende com a resposta) -->
+    <div id="facial-review" style="display:none">
+      <div id="facial-cam-title">É VOCÊ NESTA FOTO?</div>
+      <div id="facial-review-count"></div>
+      <canvas id="facial-review-canvas" style="display:none"></canvas>
+      <img id="facial-review-img" alt="foto para conferir">
+      <div id="facial-review-btns">
+        <button class="facial-ans no"  onclick="facialAnswer(false)">Não sou eu</button>
+        <button class="facial-ans yes" onclick="facialAnswer(true)">Sim, sou eu</button>
+      </div>
+      <label id="facial-remember-row">
+        <input type="checkbox" id="facial-remember">
+        <span>Lembrar meu rosto <b>neste aparelho</b> (buscas mais rápidas). Fica só aqui.</span>
+      </label>
+      <button id="facial-see" onclick="finishFacial()">Ver minhas fotos</button>
+    </div>
+  </div>
+</div>
+
 <!-- EXPIRED GATE -->
 <div id="expired-gate" style="display:none">
   <div id="expired-box">
@@ -681,22 +1118,61 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
     </button>
     <button class="drawer-item" onclick="showAll(); closeDrawer()">Todas as fotos</button>
     <button class="drawer-item" onclick="showLiked(); closeDrawer()">Só favoritas</button>
-    <button class="drawer-item" onclick="downloadFavorites(); closeDrawer()">Salvar favoritas</button>
-    <button class="drawer-item" onclick="downloadAll(); closeDrawer()">Salvar todas</button>
+    <button class="drawer-item" id="drawer-facial" onclick="openFacial(); closeDrawer()">✨ Encontrar minhas fotos</button>
+    <button class="drawer-item" onclick="openSelection(); closeDrawer()">Enviar seleção ao fotógrafo</button>
+    <button class="drawer-item" id="drawer-buy" style="display:none" onclick="buyFavorites(); closeDrawer()">Comprar originais (favoritas)</button>
+    <button class="drawer-item" id="drawer-buydl" style="display:none" onclick="downloadPurchased(); closeDrawer()">Baixar meus originais comprados</button>
+    <button class="drawer-item" id="drawer-code" style="display:none" onclick="enterUnlockCode(); closeDrawer()">Tenho um código de desbloqueio</button>
+    <a class="drawer-item" href="privacy.html" target="_blank" style="text-decoration:none;font-size:.72rem;opacity:.6">Política de privacidade</a>
+    <button class="drawer-item" id="drawer-dl-favs" onclick="downloadFavorites(); closeDrawer()">Salvar favoritas</button>
+    <button class="drawer-item" id="drawer-dl-group" onclick="downloadCurrentGroup(); closeDrawer()">Salvar deste grupo</button>
+    <button class="drawer-item" id="drawer-dl-all" onclick="downloadAll(); closeDrawer()">Salvar todas</button>
   </div>
 </div>
 
-<div id="toast"></div>
+<div id="toast-box"></div>
 
+<!-- Barra de ações dos resultados faciais -->
+<div id="facial-actions" style="display:none">
+  <span id="facial-actions-txt"></span>
+  <button class="fa-btn fav" onclick="favoriteAllFacial()">❤ Favoritar todas</button>
+  <button class="fa-btn sel" onclick="sendSelectionFacial()">Enviar seleção</button>
+  <button class="fa-btn x" onclick="hideFacialActions()" aria-label="fechar">✕</button>
+</div>
+
+<script src="gallery-render.js"></script>
+<script src="gallery-lightbox.js"></script>
 <script>
 // ── CONFIG ──
-const SURL = 'https://vtblxwaxwuztehtxkygp.supabase.co';
-const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Ymx4d2F4d3V6dGVodHhreWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NDQzMjMsImV4cCI6MjA5NjUyMDMyM30.0oscbNInwJzc2YN5eDYN76IBXvR0cTDbaLe4LDe0aKw';
-const sb = supabase.createClient(SURL, SKEY);
+const sb = getSupabase();
+
+// ── LOG DE ERROS (observabilidade) ──
+let _errCount = 0;
+function reportError(msg, detail) {
+  if (_errCount++ > 5) return;
+  try { sb.rpc('log_error', { p_page: 'gallery', p_message: String(msg||''), p_detail: String(detail||''), p_ua: navigator.userAgent }); } catch(e) {}
+}
+window.addEventListener('error', e => reportError(e.message, (e.filename||'')+':'+(e.lineno||'')));
+window.addEventListener('unhandledrejection', e => reportError('unhandledrejection', (e.reason&&e.reason.message)||String(e.reason)));
 
 // ── STATE ──
 let liked         = new Set();
 let currentView   = 'all';
+
+// ── LIKED PERSISTENCE ──
+function loadLiked() {
+  if (!galleryId) return;
+  try {
+    const saved = JSON.parse(localStorage.getItem('lrp_liked_' + galleryId) || '[]');
+    liked = new Set(saved);
+  } catch(e) {}
+}
+function saveLiked() {
+  if (!galleryId) return;
+  try {
+    localStorage.setItem('lrp_liked_' + galleryId, JSON.stringify([...liked]));
+  } catch(e) {}
+}
 let lbIndex       = 0;
 let lbPhotos      = [];
 let touchStartX   = 0;
@@ -708,20 +1184,60 @@ let bgMode         = 'white';
 let gridSize       = 'md';
 let gridGap        = 'md';
 let downloadEnabled = true;  // controle de download por galeria
+let galleryName    = '';     // nome da galeria (para a seleção)
+let galleryPrice   = 0;      // preço por foto em centavos (paywall)
+let _paywall       = false;  // álbum com marca d'água + preço > 0
+let _purchased     = new Set(); // ids de fotos já compradas por este visitante
 let _pendingPwResolve = null; // resolução da promise da senha
+let _usingRpc     = false;    // true quando as RPCs seguras existem no banco
+let _galleryToken = null;     // access_token da galeria (para chamadas RPC)
+let facialRecognitionEnabled = true;  // permite busca por rosto
+let paywallEnabled = false;   // controla se paywall está ativo
+let fullUrlDeliveryDisabled = false;  // true = full_url via RPC ao clicar "baixar"
+
+// Obter full_url sob demanda (quando cliente clica "baixar original")
+async function getFullUrlOnDemand(photoId) {
+  if (!_usingRpc || !_galleryToken) return null;
+  try {
+    const codes = paywallEnabled ? (loadCodes ? loadCodes() : []) : [];
+    const visitor = getVisitorId ? getVisitorId() : 'anon';
+    const { data, error } = await sb.rpc('get_photo_full_url', {
+      p_token: _galleryToken,
+      p_photo_id: photoId,
+      p_visitor: visitor,
+      p_codes: codes
+    });
+    return (error || !data) ? null : data;
+  } catch (e) { return null; }
+}
 
 // ── INIT ──
 async function init() {
-  const slug = new URLSearchParams(window.location.search).get('slug');
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('t');
+  const slug = params.get('slug');
 
-  // Com slug: carrega a galeria pedida. Sem slug (raiz do site): a galeria live mais recente.
+  // Com token ou slug: carrega a galeria pedida. Sem ambos: a galeria live mais recente.
   {
-    let q = sb.from('galleries')
-      .select('*, photos!photos_gallery_id_fkey(id, filename, thumb_url, full_url, position, width, height, group_name)')
-      .eq('status', 'live');
-    q = slug ? q.eq('slug', slug).single()
-             : q.order('created_at', { ascending: false }).limit(1).single();
-    const { data, error } = await q;
+    _galleryToken = token;
+    // 1º tenta a RPC segura (get_public_gallery). Se ainda não existir no banco
+    // (schema antigo), cai no SELECT direto — comportamento idêntico ao anterior.
+    let data = null, error = null, usingRpc = false;
+    {
+      const rpc = await sb.rpc('get_public_gallery', { p_token: token || null, p_slug: slug || null });
+      if (!rpc.error && Array.isArray(rpc.data) && rpc.data.length) {
+        data = rpc.data[0]; usingRpc = true;
+      } else {
+        let q = sb.from('galleries')
+          .select('id, name, slug, status, cover_photo_id, cover_position_x, cover_position_y, password_hash, expires_at, download_enabled')
+          .eq('status', 'live');
+        q = token ? q.eq('access_token', token).single()
+          : slug ? q.eq('slug', slug).single()
+                 : q.order('created_at', { ascending: false }).limit(1).single();
+        const res = await q; data = res.data; error = res.error;
+      }
+    }
+    _usingRpc = usingRpc;
 
     if (!error && data) {
       // Verifica expiração
@@ -731,30 +1247,98 @@ async function init() {
         return;
       }
 
-      // Verifica senha
-      if (data.access_password) {
-        const ok = await showPasswordGate(data.access_password, data.name);
+      // Verifica senha (RPC: has_password | fallback: password_hash)
+      const hasPw = usingRpc ? data.has_password : !!data.password_hash;
+      if (hasPw) {
+        const ok = await showPasswordGate(usingRpc ? null : data.password_hash, data.name, token);
         if (!ok) return;
       }
 
       galleryId       = data.id;
       coverPhotoId    = data.cover_photo_id || null;
       downloadEnabled = data.download_enabled !== false;
-      data.photos?.sort((a, b) => a.position - b.position);
-      // 'lg' = versão otimizada 1600px para o lightbox (carrega ~10x mais rápido que o original)
-      // IMPORTANTE: sempre width+height+resize=contain — só width distorce a imagem no Supabase
+      galleryName     = data.name || '';
+      galleryPrice    = usingRpc ? (data.price_cents || 0) : 0;
+      paywallEnabled  = usingRpc ? (data.paywall_enabled === true) : false;
+      facialRecognitionEnabled = usingRpc ? (data.facial_recognition_enabled !== false) : true;
+      fullUrlDeliveryDisabled  = usingRpc ? (data.full_url_delivery_disabled === true) : false;
+      _paywall        = !!(usingRpc && paywallEnabled && galleryPrice > 0);
+      updatePaywallUI(); refreshPurchases(); handlePaidReturn(params);
+
+      document.title = data.name + ' · @eusouleandroribeiro';
+      const ogTitle = data.name + ' · @eusouleandroribeiro';
+      document.getElementById('og-title').content = ogTitle;
+      document.getElementById('tw-title').content = ogTitle;
+      document.getElementById('og-url').content   = window.location.href;
+      loadLiked();
+
+      // Busca fotos em páginas de 500 para contornar o cap de 1000 do PostgREST
       const toLg = u => u.includes('/object/public/')
         ? u.replace('/object/public/', '/render/image/public/') + '?width=1600&height=1600&resize=contain&quality=82'
         : u;
-      // Normaliza thumbs antigos que foram gerados só com width (vinham esticados na vertical)
       const toThumb = u => u.includes('/render/image/')
         ? u.split('?')[0] + '?width=800&height=800&resize=contain&quality=80&format=webp'
         : u;
-      PHOTOS = (data.photos || []).map(p => ({
+      const mapPhoto = p => ({
         id: p.id, name: p.filename, thumb: toThumb(p.thumb_url), full: p.full_url, lg: toLg(p.full_url),
         ratio: (p.width && p.height) ? p.width / p.height : null,
         group: p.group_name || null
-      }));
+      });
+
+      let pageSize = 500;
+
+      // Total esperado — usado para detectar carga incompleta
+      let expectedCount;
+      if (usingRpc) {
+        const r = await sb.rpc('get_public_photo_count', { p_token: token });
+        expectedCount = r.error ? null : r.data;
+      } else {
+        const { count } = await sb.from('photos')
+          .select('*', { count: 'exact', head: true }).eq('gallery_id', data.id);
+        expectedCount = count;
+      }
+
+      const fetchPage = async (page) => {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          let rows, err;
+          if (usingRpc) {
+            const r = await sb.rpc('get_public_photos', { p_token: token, p_offset: page * pageSize, p_limit: pageSize });
+            rows = r.data; err = r.error;
+          } else {
+            const r = await sb.from('photos')
+              .select('id, filename, thumb_url, full_url, position, width, height, group_name')
+              .eq('gallery_id', data.id)
+              .order('position', { ascending: true })
+              .range(page * pageSize, (page + 1) * pageSize - 1);
+            rows = r.data; err = r.error;
+          }
+          if (!err) return rows || [];
+          await new Promise(r => setTimeout(r, 400 * (attempt + 1))); // backoff
+        }
+        throw new Error('Falha ao carregar fotos após 3 tentativas');
+      };
+
+      let allPhotos = [], page = 0, loadError = false;
+      try {
+        while (true) {
+          const rows = await fetchPage(page);
+          if (rows.length === 0) break;
+          allPhotos = allPhotos.concat(rows.map(mapPhoto));
+          if (rows.length < pageSize) break;
+          page++;
+        }
+      } catch (e) { loadError = true; }
+
+      // Se veio menos do que o esperado, avisa em vez de mostrar galeria incompleta em silêncio
+      if ((loadError || (expectedCount && allPhotos.length < expectedCount)) && allPhotos.length > 0) {
+        toast(`Carregadas ${allPhotos.length} de ${expectedCount} fotos — recarregue se faltar alguma`);
+      }
+      // Ordena da primeira foto até a última pela numeração do nome do arquivo
+      // (ordenação natural: DSC_2 antes de DSC_10). Garante sequência correta
+      // mesmo quando o position foi gravado fora de ordem no upload.
+      const _collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+      allPhotos.sort((a, b) => _collator.compare(a.name || '', b.name || ''));
+      PHOTOS = allPhotos;
       buildGroupTabs();
       document.getElementById('coverTitle').textContent = data.name.toUpperCase();
 
@@ -777,6 +1361,9 @@ async function init() {
         const px = data.cover_position_x ?? 50;
         const py = data.cover_position_y ?? 50;
         coverImg.style.objectPosition = `${px}% ${py}%`;
+        const ogImgUrl = coverPhoto.thumb;
+        document.getElementById('og-image').content = ogImgUrl;
+        document.getElementById('tw-image').content = ogImgUrl;
       }
     } else {
       document.getElementById('coverTitle').textContent = 'GALERIA NÃO ENCONTRADA';
@@ -791,472 +1378,127 @@ async function init() {
 
 init();
 
-// ── SCROLL / OBSERVER ──
-const cover  = document.getElementById('cover');
-const header = document.getElementById('site-header');
-const obs    = new IntersectionObserver(
-  e => header.classList.toggle('hidden-on-cover', e[0].isIntersecting),
-  { threshold: 0.1 }
-);
-obs.observe(cover);
+// ── RENDER/GRID/LIKE/VIEWS: extraído para gallery-render.js ──
+// ── LIGHTBOX/DOWNLOAD: extraído para gallery-lightbox.js ──
+// ── SELEÇÃO/DRAWER/TRACKING: extraído para gallery-selection.js ──
+// ── PASSWORD GATE/EXPIRED: extraído para gallery-gate.js ──
 
-function scrollToGrid() {
-  document.getElementById('grid-section').scrollIntoView({ behavior: 'smooth' });
-}
-
-// ── RENDER (layout justificado estilo Pixellu) ──
-function rowHeight() {
-  const w = window.innerWidth;
-  const base = { sm: 170, md: 280, lg: 430, frame: 330 }[gridSize] || 280;
-  return w < 700 ? Math.round(base * 0.6) : base;
-}
-
-// Calcula linhas justificadas: acumula fotos até encher a largura,
-// então escala a altura da linha para o encaixe exato — zero cortes.
-function layoutJustified() {
-  const grid = document.getElementById('masonry');
-  const cards = [...grid.querySelectorAll('.photo-card')];
-  if (!cards.length) return;
-  const cs   = getComputedStyle(grid);
-  const gap  = parseFloat(cs.columnGap) || 4;
-  const W    = grid.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-  const R    = rowHeight();
-  const maxH = R * 1.35; // tolerância antes de fechar a linha
-
-  let row = [], sum = 0;
-  const flush = (h) => {
-    row.forEach(o => {
-      o.card.style.height = h + 'px';
-      o.card.style.width  = (o.r * h) + 'px';
-    });
-    row = []; sum = 0;
-  };
-  cards.forEach(card => {
-    const r = parseFloat(card.dataset.ratio) || 1.5;
-    row.push({ card, r }); sum += r;
-    const gaps = (row.length - 1) * gap;
-    const h = (W - gaps) / sum;       // altura para a linha encher exatamente
-    if (h <= maxH) flush(Math.min(h, maxH));
-  });
-  if (row.length) flush(Math.min((W - (row.length - 1) * gap) / sum, R)); // última linha não estica
-}
-
-let revealObs = null;
-let _ratioTimer = null;
-function renderGrid(photos) {
-  const grid = document.getElementById('masonry');
-  grid.innerHTML = '';
-
-  // Reveal animado quando a foto entra na viewport, com stagger
-  revealObs?.disconnect();
-  revealObs = new IntersectionObserver(entries => {
-    entries.forEach(en => {
-      if (!en.isIntersecting) return;
-      const el = en.target;
-      el.style.transitionDelay = (el.dataset.st || 0) + 'ms';
-      el.classList.add('in');
-      el.addEventListener('transitionend', () => { el.style.transitionDelay = '0ms'; }, { once: true });
-      revealObs.unobserve(el);
-    });
-  }, { rootMargin: '0px 0px 80px 0px', threshold: 0.05 });
-
-  photos.forEach((photo, idx) => {
-    const card = document.createElement('div');
-    card.className = 'photo-card' + (liked.has(photo.id) ? ' liked' : '');
-    card.dataset.id = photo.id;
-    card.dataset.st = (idx % 6) * 60;                  // stagger da animação de entrada
-    card.dataset.ratio = photo.ratio || '';            // proporção do banco, se houver
-    card.innerHTML = `
-      <img src="${photo.thumb}"
-           loading="${idx < 8 ? 'eager' : 'lazy'}"
-           decoding="async"
-           alt="${photo.name}"
-           onload="photoCardSized(this)"
-           onclick="openLightbox(${idx}, event)">
-      <button class="card-heart" onclick="toggleLike(event,${photo.id},this)" title="Favoritar">
-        <svg viewBox="0 0 24 24" stroke-width="1.8">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-        </svg>
-      </button>
-    `;
-    grid.appendChild(card);
-    revealObs.observe(card);
-  });
-
-  lbPhotos = photos;
-  layoutJustified();
-}
-
-// Quando o thumb carrega: marca como visível e, se a proporção não veio
-// do banco, usa a real da imagem e re-calcula o layout (debounced)
-function photoCardSized(img) {
-  img.classList.add('loaded');
-  const card = img.closest('.photo-card');
-  if (!card || card.dataset.ratio) return;
-  card.dataset.ratio = (img.naturalWidth / img.naturalHeight) || 1.5;
-  clearTimeout(_ratioTimer);
-  _ratioTimer = setTimeout(layoutJustified, 60);
-}
-
-// ── GRUPOS ──
-let currentGroup = null; // null = todas
-
-function buildGroupTabs() {
-  const bar = document.getElementById('group-tabs');
-  const groups = [...new Set(PHOTOS.map(p => p.group).filter(Boolean))];
-  if (!groups.length) { bar.style.display = 'none'; return; }
-  bar.style.display = 'flex';
-  bar.innerHTML = `<button class="group-tab active" onclick="selectGroup(null, this)">Todas as Fotos</button>` +
-    groups.map(g => `<button class="group-tab" onclick="selectGroup('${g.replace(/'/g, "\\'")}', this)">${g}</button>`).join('');
-}
-
-function selectGroup(name, btn) {
-  currentGroup = name;
-  currentView = 'all';
-  document.querySelectorAll('.group-tab').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  const subset = name ? PHOTOS.filter(p => p.group === name) : [...PHOTOS];
-  lbPhotos = subset;
-  renderGrid(subset);
-  document.getElementById('grid-section').scrollIntoView();
-}
-
-// ── GRID SIZE ──
-function setGridSize(size) {
-  const grid = document.getElementById('masonry');
-  grid.classList.remove('size-sm','size-md','size-lg','size-frame');
-  grid.classList.add('size-' + size);
-  gridSize = size;
-  ['Sm','Md','Lg','Frame'].forEach(s =>
-    document.getElementById('btnSize'+s).classList.toggle('active', size === s.toLowerCase())
-  );
-  layoutJustified(); // re-calcula linhas com a nova altura
-}
-
-// Atualiza colunas ao redimensionar janela (ex: rotação mobile)
-let _resizeTimer;
-window.addEventListener('resize', () => {
-  clearTimeout(_resizeTimer);
-  _resizeTimer = setTimeout(() => { if (lbPhotos.length) layoutJustified(); }, 180);
-});
-
-// ── ESPAÇAMENTO ──
-function setGap(gap) {
-  const grid = document.getElementById('masonry');
-  grid.classList.remove('gap-sm','gap-md','gap-lg');
-  grid.classList.add('gap-' + gap);
-  gridGap = gap;
-  ['Sm','Md','Lg'].forEach(s =>
-    document.getElementById('btnGap'+s).classList.toggle('active', gap === s.toLowerCase())
-  );
-  setTimeout(layoutJustified, 260); // re-calcula após a transição do gap
-}
-
-// ── COR DE FUNDO ──
-function setBg(mode) {
-  const map = {
-    white: '#ffffff',
-    gray:  '#888888',
-    black: '#111111',
-    auto:  dominantColor || '#7a7a7a'
-  };
-  const color = map[mode] || '#ffffff';
-  bgMode = mode;
-  document.body.style.setProperty('--bg', color);
-  document.body.classList.toggle('bg-dark',
-    mode === 'gray' || mode === 'black' || (mode === 'auto' && isDark(dominantColor))
-  );
-  ['White','Gray','Black','Auto'].forEach(s =>
-    document.getElementById('btnBg'+s).classList.toggle('active', mode === s.toLowerCase())
-  );
-}
-
-function isDark(hex) {
-  if (!hex) return false;
-  const m = hex.match(/\d+/g);
-  if (!m || m.length < 3) return false;
-  const [r,g,b] = m.map(Number);
-  return (r*0.299 + g*0.587 + b*0.114) < 140;
-}
-
-// ── COR DOMINANTE ──
-function extractDominantColor() {
-  if (PHOTOS.length === 0) return;
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 40; canvas.height = 40;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, 40, 40);
-      const d = ctx.getImageData(0, 0, 40, 40).data;
-      let r=0, g=0, b=0, n = d.length / 4;
-      for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i+1]; b += d[i+2]; }
-      r = Math.round(r/n); g = Math.round(g/n); b = Math.round(b/n);
-      dominantColor = `rgb(${r},${g},${b})`;
-      document.getElementById('btnBgAuto').style.background = dominantColor;
-      // Atualiza fundo se já estava em modo auto
-      if (bgMode === 'auto') setBg('auto');
-    } catch(e) { /* CORS — mantém gradiente decorativo */ }
-  };
-  img.src = PHOTOS[0].thumb + (PHOTOS[0].thumb.includes('?') ? '&' : '?') + '_nc=' + Date.now();
-}
-
-// ── FOTO DE CAPA ──
-async function setCoverPhoto() {
-  const photo = lbPhotos[lbIndex];
-  if (!photo) return;
-
-  // Atualiza visualmente
-  const coverImg = document.getElementById('cover-img');
-  coverImg.style.opacity = '0';
-  setTimeout(() => { coverImg.src = photo.full; coverImg.style.opacity = '1'; }, 200);
-
-  coverPhotoId = photo.id;
-  document.getElementById('lbCoverBtn').classList.add('is-cover');
-  setTimeout(() => document.getElementById('lbCoverBtn').classList.remove('is-cover'), 1800);
-
-  // Persiste no Supabase
-  if (galleryId) {
-    const { error } = await sb
-      .from('galleries')
-      .update({ cover_photo_id: photo.id })
-      .eq('id', galleryId);
-    toast(error ? 'Erro ao salvar capa' : 'Foto de capa atualizada!');
-  } else {
-    toast('Capa definida (demo)');
-  }
-}
-
-// ── LIKE ──
-function toggleLike(e, id, btn) {
-  if (e) e.stopPropagation();
-  const wasLiked = liked.has(id);
-  wasLiked ? liked.delete(id) : liked.add(id);
-  if (!wasLiked) trackEvent('like', id);
-
-  if (!wasLiked && btn) {
-    btn.classList.add('pop');
-    btn.addEventListener('animationend', () => btn.classList.remove('pop'), {once:true});
-  }
-
-  const card = document.querySelector(`.photo-card[data-id="${id}"]`);
-  if (card) card.classList.toggle('liked', !wasLiked);
-
-  if (currentView === 'liked') {
-    const favs = PHOTOS.filter(p => liked.has(p.id));
-    if (favs.length === 0) showAll(); else renderGrid(favs);
-  }
-  updateBottomBar();
-  updateLbHeart();
-}
-
-function toggleLikeLb() {
-  const photo = lbPhotos[lbIndex];
-  if (!photo) return;
-  const btn = document.getElementById('lbHeart');
-  const wasLiked = liked.has(photo.id);
-  wasLiked ? liked.delete(photo.id) : liked.add(photo.id);
-  if (!wasLiked) trackEvent('like', photo.id);
-  btn.classList.toggle('liked', !wasLiked);
-  const card = document.querySelector(`.photo-card[data-id="${photo.id}"]`);
-  if (card) card.classList.toggle('liked', !wasLiked);
-  updateBottomBar();
-}
-
-function updateLbHeart() {
-  if (!lbPhotos[lbIndex]) return;
-  document.getElementById('lbHeart').classList.toggle('liked', liked.has(lbPhotos[lbIndex].id));
-}
-
-function updateBottomBar() {
-  const n = liked.size;
-  document.getElementById('barCount').textContent = n;
-  document.getElementById('barHeartBtn').classList.toggle('has-likes', n > 0);
-  document.getElementById('barActionBtn').title = n > 0 ? `Salvar ${n} favorita(s)` : 'Salvar todas';
-}
-
-// ── VIEWS ──
-function showAll() {
-  currentView = 'all'; currentGroup = null;
-  document.querySelectorAll('.group-tab').forEach((b, i) => b.classList.toggle('active', i === 0));
-  lbPhotos = [...PHOTOS]; renderGrid(PHOTOS);
-}
-function showLiked() {
-  const favs = PHOTOS.filter(p => liked.has(p.id));
-  if (favs.length === 0) { toast('Nenhuma foto favoritada ainda'); return; }
-  currentView = 'liked'; lbPhotos = favs; renderGrid(favs);
-}
-function openLikedView() {
-  if (liked.size === 0) { toast('Toque no ♡ das fotos para favoritar'); return; }
-  showLiked();
-  document.getElementById('grid-section').scrollIntoView({behavior:'smooth'});
-}
-
-// ── LIGHTBOX ──
-function openLightbox(idx, e) {
-  if (e) e.stopPropagation();
-  lbIndex = idx;
-  setLbPhoto(lbPhotos[idx], 0);
-  document.getElementById('lbCounter').textContent = `${idx+1} / ${lbPhotos.length}`;
-  document.getElementById('lightbox').classList.add('open');
-  document.addEventListener('keydown', lbKey);
-  trackEvent('view', lbPhotos[idx].id);
-}
-
-function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('open');
-  document.removeEventListener('keydown', lbKey);
-}
-
-function setLbPhoto(photo, dir) {
-  const img = document.getElementById('lbImg');
-
-  // Abertura instantânea: mostra o thumb (já em cache do grid) e anima na hora
-  img.classList.remove('lb-anim-right', 'lb-anim-left', 'lb-anim-open');
-  img.src = photo.thumb;
-  void img.offsetWidth;          // força reflow para reiniciar animation
-  const cls = dir > 0 ? 'lb-anim-right' : dir < 0 ? 'lb-anim-left' : 'lb-anim-open';
-  img.classList.add(cls);
-  img.addEventListener('animationend', () => img.classList.remove(cls), { once: true });
-
-  // Troca pela versão grande assim que carregar (sem nova animação)
-  const pre = new Image();
-  pre.onload = () => { if (lbPhotos[lbIndex] === photo) img.src = photo.lg; };
-  pre.src = photo.lg;
-
-  // Pré-carrega vizinhas para navegação instantânea
-  [1, -1].forEach(d => {
-    const nb = lbPhotos[(lbIndex + d + lbPhotos.length) % lbPhotos.length];
-    if (nb) new Image().src = nb.lg;
-  });
-
-  document.getElementById('lbFilename').textContent = photo.name;
-  document.getElementById('lbCoverBtn').classList.toggle('is-cover', photo.id === coverPhotoId);
-  updateLbHeart();
-}
-
-function lbNav(dir) {
-  lbIndex = (lbIndex + dir + lbPhotos.length) % lbPhotos.length;
-  setLbPhoto(lbPhotos[lbIndex], dir);
-  document.getElementById('lbCounter').textContent = `${lbIndex+1} / ${lbPhotos.length}`;
-  trackEvent('view', lbPhotos[lbIndex].id);
-}
-
-function lbKey(e) {
-  if (e.key === 'ArrowRight') lbNav(1);
-  if (e.key === 'ArrowLeft')  lbNav(-1);
-  if (e.key === 'Escape')     closeLightbox();
-}
-
-// Swipe mobile — ignora toques nas setas laterais
-document.getElementById('lbImgArea').addEventListener('touchstart',
-  e => { touchStartX = e.changedTouches[0].clientX; }, { passive: true });
-document.getElementById('lbImgArea').addEventListener('touchend', e => {
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  if (Math.abs(dx) > 48) lbNav(dx < 0 ? 1 : -1);
-}, { passive: true });
-
-// ── DOWNLOAD ──
-function downloadCurrent() {
-  const p = lbPhotos[lbIndex];
-  trackEvent('save', p.id);
-  dl(p.full, p.name);
-  toast('Download iniciado');
-}
-function downloadFavorites() {
-  const favs = PHOTOS.filter(p => liked.has(p.id));
-  if (favs.length === 0) { toast('Nenhuma foto favoritada ainda'); return; }
-  toast(`Salvando ${favs.length} favorita(s)...`);
-  favs.forEach((p,i) => setTimeout(() => dl(p.full, p.name), i * 350));
-}
-function downloadAll() {
-  toast(`Salvando ${PHOTOS.length} fotos...`);
-  PHOTOS.forEach((p,i) => setTimeout(() => dl(p.full, p.name), i * 300));
-}
-function dl(url, filename) {
-  const a = document.createElement('a');
-  a.href = url; a.download = filename; a.target = '_blank';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-}
-
-// ── AÇÃO PRINCIPAL ──
-function handleBarAction() {
-  liked.size > 0
-    ? downloadFavorites()
-    : toast('Favorite fotos com ♡ ou use o menu para salvar todas');
-}
-
-// ── DRAWER ──
-function openDrawer()  { document.getElementById('drawer').classList.add('open'); }
-function closeDrawer() { document.getElementById('drawer').classList.remove('open'); }
-
-// ── VISITOR ID ──
-function getVisitorId() {
-  const KEY = 'lrp_vid';
-  let vid = localStorage.getItem(KEY);
-  if (!vid) {
-    vid = (crypto.randomUUID
-      ? crypto.randomUUID()
-      : 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2));
-    localStorage.setItem(KEY, vid);
-  }
-  return vid;
-}
-
-// ── EVENT TRACKING ──
-async function trackEvent(type, photoId) {
-  if (!galleryId || !photoId) return;
-  try {
-    await sb.from('photo_events').insert({
-      gallery_id: galleryId,
-      photo_id:   photoId,
-      event_type: type,
-      visitor_id: getVisitorId()
-    });
-  } catch(e) { /* silencioso */ }
-}
-
-// ── PASSWORD GATE ──
-function showPasswordGate(password, galleryName) {
-  return new Promise(resolve => {
-    _pendingPwResolve = resolve;
-    const gate = document.getElementById('pw-gate');
-    if (galleryName) document.getElementById('pw-gallery-name').textContent = galleryName.toUpperCase();
-    gate.style.display = 'flex';
-    document.getElementById('pw-input').focus();
-    // store password for checkPw
-    gate.dataset.pw = password;
-  });
-}
-
-function checkPw() {
-  const gate  = document.getElementById('pw-gate');
-  const input = document.getElementById('pw-input');
-  const err   = document.getElementById('pw-error');
-  if (input.value === gate.dataset.pw) {
-    gate.style.display = 'none';
-    if (_pendingPwResolve) { _pendingPwResolve(true); _pendingPwResolve = null; }
-  } else {
-    err.textContent = 'Senha incorreta';
-    input.value = '';
-    input.classList.add('shake');
-    input.addEventListener('animationend', () => input.classList.remove('shake'), {once:true});
-  }
-}
-
-// ── EXPIRED OVERLAY ──
-function showExpiredOverlay() {
-  document.getElementById('expired-gate').style.display = 'flex';
-}
-
-// ── TOAST ──
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
-}
+// toast() vem de gallery-utils.js
 </script>
+
+<!-- MODAL DE CONSENTIMENTO LGPD -->
+<div class="modal-container" id="lgpd-consent-modal" style="display: none;">
+  <div class="lgpd-modal">
+    <div class="lgpd-modal-header">
+      <h2>🔐 Consentimento para Reconhecimento Facial</h2>
+      <p>Sua privacidade é nossa prioridade</p>
+    </div>
+
+    <div class="lgpd-modal-content">
+      <div class="lgpd-consent-section">
+        <h3>📋 O que vamos fazer com seus dados?</h3>
+        <p>Você autoriza o armazenamento e processamento de sua selfie para:</p>
+        <div class="lgpd-consent-list">
+          • Identificar você nas fotos do evento usando reconhecimento facial<br>
+          • Melhorar a precisão do reconhecimento<br>
+          • Fornecer uma experiência personalizada e segura
+        </div>
+      </div>
+
+      <div class="lgpd-consent-section">
+        <h3>🔐 Como seus dados são protegidos?</h3>
+        <p>Implementamos medidas avançadas:</p>
+        <div class="lgpd-consent-list">
+          ✓ Criptografia end-to-end (AES-256)<br>
+          ✓ Servidores certificados (ISO 27001)<br>
+          ✓ Acesso restrito com autenticação multi-fator<br>
+          ✓ Conformidade com LGPD e GDPR
+        </div>
+      </div>
+
+      <div class="lgpd-data-retention">
+        <strong>⏱️ Retenção de Dados:</strong> Sua selfie será mantida por <strong>180 dias</strong>. Após isso, será automaticamente deletada. Você pode solicitar exclusão imediata a qualquer momento.
+      </div>
+
+      <div class="lgpd-consent-section">
+        <h3>✋ Seus Direitos LGPD</h3>
+        <p>Você tem direitos garantidos. Para exercê-los, acesse nossa <a href="https://www.souleandroribeiro.com.br/gallery/privacidade" class="lgpd-privacy-link" target="_blank">Central de Privacidade</a></p>
+      </div>
+
+      <div class="lgpd-checkbox-group">
+        <div class="lgpd-checkbox-item">
+          <input type="checkbox" id="lgpd-understand" onchange="updateConsentAcceptButton()">
+          <label for="lgpd-understand">
+            <strong>Entendo</strong> como meus dados serão usados
+          </label>
+        </div>
+        <div class="lgpd-checkbox-item">
+          <input type="checkbox" id="lgpd-rights" onchange="updateConsentAcceptButton()">
+          <label for="lgpd-rights">
+            <strong>Reconheço</strong> meus direitos LGPD
+          </label>
+        </div>
+        <div class="lgpd-checkbox-item">
+          <input type="checkbox" id="lgpd-consent" onchange="updateConsentAcceptButton()">
+          <label for="lgpd-consent">
+            <strong>Consinto</strong> que meus dados biométricos sejam processados
+          </label>
+        </div>
+        <div class="lgpd-required-text" id="lgpd-requiredText">* Todos os itens acima são obrigatórios</div>
+      </div>
+    </div>
+
+    <div class="lgpd-modal-footer">
+      <button class="lgpd-btn lgpd-btn-reject" onclick="rejectConsentModal()">Recusar</button>
+      <button class="lgpd-btn lgpd-btn-accept" id="lgpd-acceptBtn" disabled onclick="acceptConsentAndContinue()">Aceitar e Continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TUTORIAL MODAL -->
+<div id="tutorial-modal" style="display: none;">
+  <div class="tutorial-container">
+    <div class="tutorial-header">
+      <h1>Bem-vindo à galeria</h1>
+      <p>Como aproveitar suas fotos</p>
+    </div>
+
+    <div class="tutorial-content">
+      <div class="tutorial-feature">
+        <div class="tutorial-text">
+          <h3>Favoritar fotos</h3>
+          <p>Toque no coração para marcar suas favoritas. Depois você baixa <b>só as favoritas</b> de uma vez.</p>
+        </div>
+      </div>
+
+      <div class="tutorial-feature">
+        <div class="tutorial-text">
+          <h3>Buscar por rosto</h3>
+          <p>Abra primeiro o <b>grupo que você faz parte</b> (ex.: Palestrantes, Participantes) e faça a busca ali — mais rápido e certeiro. Tire uma selfie e o sistema <b>encontra você</b>.</p>
+        </div>
+      </div>
+
+      <div class="tutorial-feature">
+        <div class="tutorial-text">
+          <h3>Navegar por grupos</h3>
+          <p>Use as abas no topo para filtrar por <b>grupos</b> — um momento, um time, uma pessoa.</p>
+        </div>
+      </div>
+
+      <div class="tutorial-feature">
+        <div class="tutorial-text">
+          <h3>Baixar</h3>
+          <p>Baixe <b>todas</b>, <b>as favoritas</b> ou <b>o grupo selecionado</b> em um clique.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tutorial-footer">
+      <button class="tutorial-btn tutorial-btn-skip" onclick="tutorialManager.skipTutorial()">Pular</button>
+      <button class="tutorial-btn tutorial-btn-got-it" onclick="tutorialManager.hideTutorial()">Entendi</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

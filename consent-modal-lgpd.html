@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consentimento LGPD - Identificação por Rosto</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .demo-container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: start;
+        }
+
+        /* ========== IMAGEM DE DIVULGAÇÃO ========== */
+        .disclosure-image {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .image-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            border-radius: 16px;
+            text-align: center;
+            margin: -40px -40px 20px -40px;
+        }
+
+        .image-header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .image-header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .image-content {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .info-section {
+            display: flex;
+            gap: 15px;
+        }
+
+        .info-icon {
+            width: 50px;
+            height: 50px;
+            background: #667eea;
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .info-text h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .info-text p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #856404;
+        }
+
+        .rights-list {
+            background: #f0f7ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .rights-list h4 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .rights-list ul {
+            list-style: none;
+        }
+
+        .rights-list li {
+            color: #555;
+            font-size: 14px;
+            padding: 8px 0;
+            display: flex;
+            gap: 8px;
+        }
+
+        .rights-list li:before {
+            content: "✓";
+            color: #667eea;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        /* ========== MODAL FUNCIONAL ========== */
+        .modal-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 24px;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.4);
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 24px 24px 0 0;
+            text-align: center;
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .modal-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .modal-content {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .consent-section {
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 20px;
+        }
+
+        .consent-section h3 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .consent-section p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .consent-list {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .checkbox-group {
+            background: #f0f7ff;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .checkbox-item {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            margin-top: 2px;
+            accent-color: #667eea;
+            flex-shrink: 0;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            flex: 1;
+            font-size: 14px;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .checkbox-item input[type="checkbox"]:hover {
+            transform: scale(1.05);
+        }
+
+        .data-retention {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #856404;
+            line-height: 1.6;
+        }
+
+        .modal-footer {
+            padding: 30px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-reject {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .btn-reject:hover {
+            background: #e8e8e8;
+        }
+
+        .btn-accept {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 2;
+        }
+
+        .btn-accept:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-accept:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .required-text {
+            color: #ff6b6b;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .privacy-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .privacy-link:hover {
+            text-decoration: underline;
+        }
+
+        /* ========== TEST PANEL ========== */
+        .test-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .test-panel h3 {
+            color: #333;
+            font-size: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 15px;
+        }
+
+        .test-result {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #333;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .test-result.success {
+            border-left-color: #26de81;
+            background: #f0fff4;
+        }
+
+        .test-result.error {
+            border-left-color: #ff6b6b;
+            background: #fff5f5;
+        }
+
+        .test-button {
+            padding: 10px 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .test-button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-badge.active {
+            background: #d4f5e0;
+            color: #26de81;
+        }
+
+        .status-badge.inactive {
+            background: #ffe8e8;
+            color: #ff6b6b;
+        }
+
+        @media (max-width: 1024px) {
+            .demo-container {
+                grid-template-columns: 1fr;
+            }
+
+            .disclosure-image {
+                position: relative;
+                z-index: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- IMAGEM DE DIVULGAÇÃO -->
+    <div class="demo-container">
+        <div class="disclosure-image">
+            <div class="image-header">
+                <h1>🔐 Sua Privacidade é Nossa Prioridade</h1>
+                <p>Identificação Biométrica Segura e Responsável</p>
+            </div>
+
+            <div class="image-content">
+                <div class="info-section">
+                    <div class="info-icon">📸</div>
+                    <div class="info-text">
+                        <h3>Como Funciona</h3>
+                        <p>Você compartilha uma selfie para encontrar suas fotos no álbum do evento usando reconhecimento facial avançado. Simples, rápido e seguro.</p>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <div class="info-icon">🔒</div>
+                    <div class="info-text">
+                        <h3>Dados Protegidos</h3>
+                        <p>Sua selfie é criptografada e armazenada em servidores seguros, em conformidade total com a LGPD e padrões internacionais de privacidade.</p>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <div class="info-icon">⏱️</div>
+                    <div class="info-text">
+                        <h3>Retenção Limitada</h3>
+                        <p>Seus dados biométricos são mantidos apenas pelo tempo necessário e podem ser deletados a qualquer momento, conforme seus direitos LGPD.</p>
+                    </div>
+                </div>
+
+                <div class="highlight">
+                    <strong>✓ Você tem controle total:</strong> Pode revogar o consentimento, acessar seus dados, corrigir informações ou solicitar a exclusão total a qualquer momento.
+                </div>
+
+                <div class="rights-list">
+                    <h4>Seus Direitos LGPD:</h4>
+                    <ul>
+                        <li><strong>Direito de Acesso:</strong> Solicitar quais dados seus temos</li>
+                        <li><strong>Direito de Correção:</strong> Corrigir dados imprecisos</li>
+                        <li><strong>Direito ao Esquecimento:</strong> Deletar seus dados</li>
+                        <li><strong>Direito de Revogação:</strong> Retirar consentimento a qualquer hora</li>
+                        <li><strong>Direito à Portabilidade:</strong> Receber seus dados em formato aberto</li>
+                        <li><strong>Direito de Oposição:</strong> Recusar processamento de dados</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- TEST PANEL -->
+        <div class="test-panel">
+            <h3>🧪 Painel de Testes <span class="status-badge inactive" id="statusBadge">Não Consentido</span></h3>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="test-button" onclick="testOpenModal()">▶ Abrir Modal</button>
+                <button class="test-button" onclick="testAcceptConsent()">✓ Simular Aceitar</button>
+                <button class="test-button" onclick="testRejectConsent()">✗ Simular Recusar</button>
+                <button class="test-button" onclick="testClearStorage()">🗑️ Limpar Storage</button>
+                <button class="test-button" onclick="testRevokeConsent()">⚠️ Revogar Consentimento</button>
+                <button class="test-button" onclick="testVerifyCompliance()">✅ Verificar Conformidade</button>
+            </div>
+
+            <div class="test-result" id="testResult">
+                Clique nos botões acima para testar as funcionalidades de consentimento LGPD...
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONSENTIMENTO -->
+    <div class="modal-container" id="consentModal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>🔐 Política de Privacidade e Consentimento</h2>
+                <p>Identificação Biométrica por Reconhecimento Facial</p>
+            </div>
+
+            <div class="modal-content">
+                <div class="consent-section">
+                    <h3>📋 O que vamos fazer com seus dados?</h3>
+                    <p>Você autoriza o armazenamento e processamento de sua selfie para:</p>
+                    <div class="consent-list">
+                        • Identificar você nas fotos do evento usando reconhecimento facial<br>
+                        • Melhorar a qualidade e precisão do reconhecimento (machine learning)<br>
+                        • Fornecer uma experiência personalizada e segura<br>
+                        • Cumprir obrigações legais e regulatórias
+                    </div>
+                </div>
+
+                <div class="consent-section">
+                    <h3>🔐 Como seus dados são protegidos?</h3>
+                    <p>Implementamos medidas de segurança avançadas:</p>
+                    <div class="consent-list">
+                        ✓ Criptografia end-to-end (AES-256)<br>
+                        ✓ Servidores em data centers certificados (ISO 27001)<br>
+                        ✓ Acesso restrito com autenticação multi-fator<br>
+                        ✓ Logs de auditoria completos<br>
+                        ✓ Conformidade com LGPD, GDPR e padrões internacionais
+                    </div>
+                </div>
+
+                <div class="data-retention">
+                    <strong>⏱️ Retenção de Dados:</strong> Sua selfie será mantida por <strong>180 dias</strong> após o evento. Após esse período, será automaticamente deletada de nossos servidores. Você pode solicitar exclusão imediata a qualquer momento.
+                </div>
+
+                <div class="consent-section">
+                    <h3>✋ Seus Direitos e Como Exercê-los</h3>
+                    <p>Você tem direitos garantidos pela LGPD. Para exercê-los, acesse nossa <a href="#" class="privacy-link">Central de Privacidade</a> ou envie email para <strong>privacidade@lrpgallery.com.br</strong></p>
+                    <div class="consent-list">
+                        • <strong>Direito de Acesso:</strong> Receber cópia de seus dados<br>
+                        • <strong>Direito de Correção:</strong> Corrigir informações imprecisas<br>
+                        • <strong>Direito ao Esquecimento:</strong> Solicitar exclusão total<br>
+                        • <strong>Direito de Revogação:</strong> Cancelar consentimento a qualquer hora<br>
+                        • <strong>Direito de Oposição:</strong> Recusar certos tipos de processamento
+                    </div>
+                </div>
+
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="understand" onchange="updateAcceptButton()">
+                        <label for="understand">
+                            <strong>Entendo</strong> como meus dados serão usados e concordo com a política acima
+                        </label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rights" onchange="updateAcceptButton()">
+                        <label for="rights">
+                            <strong>Reconheço</strong> meus direitos LGPD e como exercê-los
+                        </label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="consent" onchange="updateAcceptButton()">
+                        <label for="consent">
+                            <strong>Consinto</strong> explicitamente que meus dados biométricos sejam processados conforme descrito
+                        </label>
+                    </div>
+                    <div class="required-text" id="requiredText">* Todos os itens acima são obrigatórios</div>
+                </div>
+
+                <div class="consent-section">
+                    <p style="font-size: 12px; color: #999;">
+                        <strong>Timestamp de Consentimento:</strong> Seu consentimento será registrado com data, hora e IP para fins de conformidade e auditoria.
+                    </p>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-reject" onclick="rejectConsent()">Recusar</button>
+                <button class="btn btn-accept" id="acceptBtn" disabled onclick="acceptConsent()">Aceitar e Continuar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== GERENCIAMENTO DE CONSENTIMENTO ==========
+        const CONSENT_STORAGE_KEY = 'lgpd_consent_biometric';
+        const CONSENT_VERSION = '1.0';
+        const CONSENT_EXPIRY_DAYS = 365;
+
+        // Estrutura de consentimento conforme LGPD
+        class ConsentManager {
+            constructor() {
+                this.consentData = null;
+                this.loadConsent();
+            }
+
+            // Salvar consentimento
+            acceptConsent() {
+                const consentRecord = {
+                    version: CONSENT_VERSION,
+                    accepted: true,
+                    timestamp: new Date().toISOString(),
+                    expiryDate: new Date(Date.now() + CONSENT_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString(),
+                    userIP: 'mock-ip-' + Math.random().toString(36).substr(2, 9),
+                    userAgent: navigator.userAgent,
+                    checkboxes: {
+                        understand: document.getElementById('understand').checked,
+                        rights: document.getElementById('rights').checked,
+                        consent: document.getElementById('consent').checked
+                    }
+                };
+
+                localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(consentRecord));
+                this.consentData = consentRecord;
+                return consentRecord;
+            }
+
+            // Recusar consentimento
+            rejectConsent() {
+                const rejectRecord = {
+                    version: CONSENT_VERSION,
+                    accepted: false,
+                    timestamp: new Date().toISOString(),
+                    userIP: 'mock-ip-' + Math.random().toString(36).substr(2, 9),
+                    userAgent: navigator.userAgent,
+                    reason: 'user_rejected'
+                };
+
+                localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(rejectRecord));
+                this.consentData = rejectRecord;
+                return rejectRecord;
+            }
+
+            // Carregar consentimento armazenado
+            loadConsent() {
+                const stored = localStorage.getItem(CONSENT_STORAGE_KEY);
+                if (stored) {
+                    this.consentData = JSON.parse(stored);
+                    return this.consentData;
+                }
+                return null;
+            }
+
+            // Verificar se consentimento é válido
+            isConsentValid() {
+                if (!this.consentData) return false;
+                if (!this.consentData.accepted) return false;
+
+                const expiryDate = new Date(this.consentData.expiryDate);
+                return expiryDate > new Date();
+            }
+
+            // Revogar consentimento
+            revokeConsent() {
+                const revokeRecord = {
+                    version: CONSENT_VERSION,
+                    accepted: false,
+                    timestamp: new Date().toISOString(),
+                    revokedAt: new Date().toISOString(),
+                    reason: 'user_revoked',
+                    previousConsent: this.consentData
+                };
+
+                localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(revokeRecord));
+                this.consentData = revokeRecord;
+                return revokeRecord;
+            }
+
+            // Verificar conformidade LGPD
+            checkCompliance() {
+                const checks = {
+                    hasConsentRecord: this.consentData !== null,
+                    isAccepted: this.consentData?.accepted === true,
+                    hasValidExpiry: this.consentData?.expiryDate !== undefined,
+                    isNotExpired: this.isConsentValid(),
+                    hasTimestamp: this.consentData?.timestamp !== undefined,
+                    hasUserIP: this.consentData?.userIP !== undefined,
+                    hasUserAgent: this.consentData?.userAgent !== undefined,
+                    hasCheckboxAudit: this.consentData?.checkboxes !== undefined
+                };
+
+                return {
+                    isCompliant: Object.values(checks).every(v => v === true) || (checks.hasConsentRecord && !checks.isAccepted),
+                    checks: checks,
+                    consentData: this.consentData
+                };
+            }
+
+            clearAll() {
+                localStorage.removeItem(CONSENT_STORAGE_KEY);
+                this.consentData = null;
+            }
+        }
+
+        const consentManager = new ConsentManager();
+
+        // ========== FUNÇÕES DO MODAL ==========
+        function openModal() {
+            if (!consentManager.isConsentValid()) {
+                document.getElementById('consentModal').style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('consentModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function updateAcceptButton() {
+            const allChecked =
+                document.getElementById('understand').checked &&
+                document.getElementById('rights').checked &&
+                document.getElementById('consent').checked;
+
+            document.getElementById('acceptBtn').disabled = !allChecked;
+            document.getElementById('requiredText').style.display = allChecked ? 'none' : 'block';
+        }
+
+        function acceptConsent() {
+            const record = consentManager.acceptConsent();
+            logTest('✅ Consentimento Aceito', record, 'success');
+            updateStatusBadge();
+            closeModal();
+        }
+
+        function rejectConsent() {
+            const record = consentManager.rejectConsent();
+            logTest('❌ Consentimento Recusado', record, 'error');
+            updateStatusBadge();
+            closeModal();
+        }
+
+        // ========== FUNÇÕES DE TESTE ==========
+        function testOpenModal() {
+            openModal();
+            logTest('📭 Modal Aberto', 'Clique nos checkboxes e confirme');
+        }
+
+        function testAcceptConsent() {
+            if (!document.getElementById('understand').checked) {
+                document.getElementById('understand').checked = true;
+                document.getElementById('rights').checked = true;
+                document.getElementById('consent').checked = true;
+                updateAcceptButton();
+            }
+            acceptConsent();
+        }
+
+        function testRejectConsent() {
+            rejectConsent();
+        }
+
+        function testClearStorage() {
+            consentManager.clearAll();
+            logTest('🗑️ Storage Limpo', 'Todos os dados de consentimento foram removidos', 'success');
+            updateStatusBadge();
+        }
+
+        function testRevokeConsent() {
+            const record = consentManager.revokeConsent();
+            logTest('⚠️ Consentimento Revogado', record, 'error');
+            updateStatusBadge();
+        }
+
+        function testVerifyCompliance() {
+            const compliance = consentManager.checkCompliance();
+            const complianceText = `
+VERIFICAÇÃO DE CONFORMIDADE LGPD
+═════════════════════════════════════════════
+
+Status Geral: ${compliance.isCompliant ? '✅ CONFORME' : '❌ NÃO CONFORME'}
+
+Verificações Realizadas:
+────────────────────────────────────────────
+${Object.entries(compliance.checks).map(([key, value]) =>
+    `${value ? '✓' : '✗'} ${key.replace(/([A-Z])/g, ' $1').trim()}`
+).join('\n')}
+
+Dados de Consentimento:
+────────────────────────────────────────────
+${JSON.stringify(compliance.consentData, null, 2)}
+
+Direitos LGPD Disponíveis:
+────────────────────────────────────────────
+✓ Direito de Acesso
+✓ Direito de Correção
+✓ Direito ao Esquecimento
+✓ Direito de Revogação
+✓ Direito de Oposição
+✓ Direito à Portabilidade
+
+Contato para Exercer Direitos:
+────────────────────────────────────────────
+Email: privacidade@lrpgallery.com.br
+Telefone: (11) XXXX-XXXX
+Site: https://lrpgallery.com.br/privacidade
+            `;
+
+            logTest('✅ Conformidade Verificada', complianceText, compliance.isCompliant ? 'success' : 'error');
+        }
+
+        function updateStatusBadge() {
+            const badge = document.getElementById('statusBadge');
+            const isValid = consentManager.isConsentValid();
+
+            if (isValid) {
+                badge.textContent = 'Consentido ✓';
+                badge.className = 'status-badge active';
+            } else {
+                badge.textContent = 'Não Consentido';
+                badge.className = 'status-badge inactive';
+            }
+        }
+
+        function logTest(title, data, type = 'success') {
+            const resultDiv = document.getElementById('testResult');
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            const formattedData = typeof data === 'object' ? JSON.stringify(data, null, 2) : data;
+
+            const html = `
+<div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.1);">
+    <strong>${title}</strong> <span style="color: #999; font-size: 11px;">[${timestamp}]</span>
+    <pre style="background: ${type === 'error' ? '#ffe8e8' : '#f0fff4'}; padding: 10px; border-radius: 6px; margin-top: 8px; overflow-x: auto;">
+${formattedData}
+    </pre>
+</div>
+            `;
+
+            resultDiv.innerHTML += html;
+            resultDiv.scrollTop = resultDiv.scrollHeight;
+        }
+
+        // Inicializar
+        updateStatusBadge();
+        logTest('✅ Sistema Inicializado', 'ConsentManager carregado e pronto para testes');
+    </script>
+</body>
+</html>

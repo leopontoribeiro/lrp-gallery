@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Como Usar - Tutorial Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .screen-container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        .phone-mockup {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .phone-frame {
+            position: relative;
+            width: 280px;
+            height: 560px;
+            background: #000;
+            border-radius: 40px;
+            padding: 12px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .phone-frame::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 25px;
+            background: #000;
+            border-radius: 0 0 25px 25px;
+            z-index: 10;
+        }
+
+        .screen-content {
+            width: 100%;
+            height: 100%;
+            background: #f5f5f5;
+            border-radius: 30px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            background: #333;
+            color: white;
+            padding: 8px 15px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 25px;
+        }
+
+        .app-content {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            gap: 0;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-size: 11px;
+            border: none;
+            background: white;
+            cursor: pointer;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: #f9f9f9;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 10px;
+            flex: 1;
+        }
+
+        .photo-item {
+            position: relative;
+            background: #ddd;
+            border-radius: 8px;
+            aspect-ratio: 1;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #999;
+        }
+
+        .photo-item.with-img {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .favorite-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+            z-index: 5;
+        }
+
+        .favorite-btn.active {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .search-bar {
+            margin: 10px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 12px;
+            background: white;
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 6px;
+            padding: 0 10px 10px;
+            justify-content: center;
+        }
+
+        .color-option {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .color-option.active {
+            border-color: #333;
+            transform: scale(1.1);
+        }
+
+        .features {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .feature {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+
+        .feature h3 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feature-icon {
+            width: 28px;
+            height: 28px;
+            background: #667eea;
+            color: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .feature p {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .feature-steps {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+        }
+
+        .feature-steps li {
+            margin: 6px 0;
+            color: #555;
+            margin-left: 20px;
+        }
+
+        .bottom-nav {
+            display: flex;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            height: 45px;
+            gap: 0;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #999;
+            background: white;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active {
+            color: #667eea;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            .phone-mockup {
+                order: 2;
+            }
+
+            .features {
+                order: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="screen-container">
+        <div class="header">
+            <h1>📱 Como Usar a Gallery</h1>
+            <p>Explore todas as funcionalidades do aplicativo</p>
+        </div>
+
+        <div class="content">
+            <div class="phone-mockup">
+                <div class="phone-frame">
+                    <div class="screen-content">
+                        <div class="status-bar">
+                            <span>9:41</span>
+                            <span>●●●●●</span>
+                        </div>
+
+                        <div class="app-header">Galeria de Fotos</div>
+
+                        <div class="tabs">
+                            <button class="tab active">Todas</button>
+                            <button class="tab">Favoritas</button>
+                            <button class="tab">Rosto</button>
+                        </div>
+
+                        <input type="text" class="search-bar" placeholder="🔍 Buscar por rosto...">
+
+                        <div class="color-picker">
+                            <div class="color-option active" style="background: #667eea;"></div>
+                            <div class="color-option" style="background: #764ba2;"></div>
+                            <div class="color-option" style="background: #ff6b6b;"></div>
+                            <div class="color-option" style="background: #ffa502;"></div>
+                        </div>
+
+                        <div class="gallery-grid">
+                            <div class="photo-item with-img">
+                                <button class="favorite-btn active">❤️</button>
+                                Foto 1
+                            </div>
+                            <div class="photo-item with-img">
+                                <button class="favorite-btn">🤍</button>
+                                Foto 2
+                            </div>
+                            <div class="photo-item with-img">
+                                <button class="favorite-btn active">❤️</button>
+                                Foto 3
+                            </div>
+                            <div class="photo-item with-img">
+                                <button class="favorite-btn">🤍</button>
+                                Foto 4
+                            </div>
+                        </div>
+
+                        <div class="bottom-nav">
+                            <button class="nav-item active">
+                                <div class="nav-icon">📷</div>
+                                <div>Galeria</div>
+                            </button>
+                            <button class="nav-item">
+                                <div class="nav-icon">❤️</div>
+                                <div>Favoritas</div>
+                            </button>
+                            <button class="nav-item">
+                                <div class="nav-icon">🔍</div>
+                                <div>Rosto</div>
+                            </button>
+                            <button class="nav-item">
+                                <div class="nav-icon">⚙️</div>
+                                <div>Temas</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="features">
+                <div class="feature">
+                    <h3>
+                        <div class="feature-icon">❤️</div>
+                        Favoritar Fotos
+                    </h3>
+                    <p>Toque no ícone de coração para marcar suas fotos favoritas. As fotos marcadas ficarão salvas na aba "Favoritas".</p>
+                    <div class="feature-steps">
+                        <ol>
+                            <li>Toque no coração branco (🤍) da foto</li>
+                            <li>Ele ficará vermelho (❤️) indicando que foi favoritada</li>
+                            <li>Acesse a aba "Favoritas" para ver todas as suas fotos favoritas</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="feature">
+                    <h3>
+                        <div class="feature-icon">🔍</div>
+                        Buscar por Rosto
+                    </h3>
+                    <p>Use a busca por reconhecimento facial para encontrar fotos de uma pessoa específica.</p>
+                    <div class="feature-steps">
+                        <ol>
+                            <li>Acesse a aba "Rosto"</li>
+                            <li>Tire uma selfie ou envie uma foto do rosto</li>
+                            <li>O app procurará todas as fotos com esse rosto</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="feature">
+                    <h3>
+                        <div class="feature-icon">🎨</div>
+                        Mudar Cores e Temas
+                    </h3>
+                    <p>Personalize a aparência do app escolhendo diferentes cores e temas visuais.</p>
+                    <div class="feature-steps">
+                        <ol>
+                            <li>Toque nos círculos de cor na parte superior</li>
+                            <li>Escolha sua cor favorita</li>
+                            <li>Ou acesse "⚙️ Temas" para mais opções</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="feature">
+                    <h3>
+                        <div class="feature-icon">📂</div>
+                        Abas de Navegação
+                    </h3>
+                    <p>Use as abas no topo para filtrar e organizar suas fotos.</p>
+                    <div class="feature-steps">
+                        <ol>
+                            <li><strong>Todas:</strong> Veja todas as fotos do álbum</li>
+                            <li><strong>Favoritas:</strong> Acesse suas fotos favoritadas</li>
+                            <li><strong>Rosto:</strong> Busque por reconhecimento facial</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

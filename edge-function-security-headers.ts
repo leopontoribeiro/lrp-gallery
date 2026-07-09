@@ -1,80 +1,84 @@
-// ========== SUPABASE EDGE FUNCTION: Security Headers ==========
-// Criar em Supabase > Edge Functions > security-headers
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "https://deno.land/std@0.168.0/http/cors.ts";
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-
-serve(async (req: Request) => {
-  // CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: getSecurityHeaders({})
-    });
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
-  // Proxiar requisição
-  const response = await fetch(req);
+  const url = new URL(req.url);
+  const pathname = url.pathname;
 
-  // Adicionar headers de segurança
-  const headers = new Headers(response.headers);
-  const securityHeaders = getSecurityHeaders(req);
+  // Forward to origin
+  const originUrl = `${Deno.env.get("SUPABASE_URL")}${pathname}${url.search}`;
 
-  for (const [key, value] of Object.entries(securityHeaders)) {
-    headers.set(key, value);
-  }
-
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers
+  const response = await fetch(originUrl, {
+    method: req.method,
+    headers: {
+      ...Object.fromEntries(req.headers),
+      "authorization": req.headers.get("authorization") || "",
+    },
+    body: req.body ? req : undefined,
   });
-});
 
-function getSecurityHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get('origin');
+  // Create response with security headers
+  const newResponse = new Response(response.body, response);
+
+  // Content Security Policy
+  newResponse.headers.set(
+    "Content-Security-Policy",
+    "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "img-src 'self' data: https:; " +
+      "font-src 'self' https://fonts.gstatic.com; " +
+      "connect-src 'self' https://*.ingest.sentry.io; " +
+      "frame-ancestors 'none'; " +
+      "base-uri 'self'; " +
+      "form-action 'self'"
+  );
+
+  // CORS - Restricted by origin
   const allowedOrigins = [
-    'https://lrp-gallery.com',
-    'https://www.lrp-gallery.com',
-    'https://admin.lrp-gallery.com'
+    "https://souleandroribeiro.com.br",
+    "https://www.souleandroribeiro.com.br",
+    "https://gallery.souleandroribeiro.com.br",
+    "http://localhost:3000",
+    "http://localhost:5173",
   ];
 
-  const isAllowedOrigin = allowedOrigins.includes(origin || '');
+  const origin = req.headers.get("origin") || "";
+  if (allowedOrigins.includes(origin)) {
+    newResponse.headers.set("Access-Control-Allow-Origin", origin);
+    newResponse.headers.set(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, DELETE, OPTIONS"
+    );
+    newResponse.headers.set(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization"
+    );
+    newResponse.headers.set("Access-Control-Allow-Credentials", "true");
+  }
 
-  return {
-    // CORS
-    ...(isAllowedOrigin && {
-      'Access-Control-Allow-Origin': origin,
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-ID',
-      'Access-Control-Max-Age': '3600',
-      'Access-Control-Allow-Credentials': 'true'
-    }),
+  // Security Headers
+  newResponse.headers.set("X-Content-Type-Options", "nosniff");
+  newResponse.headers.set("X-Frame-Options", "DENY");
+  newResponse.headers.set("X-XSS-Protection", "1; mode=block");
+  newResponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 
-    // Security Headers
-    'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
-    'X-XSS-Protection': '1; mode=block',
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Permissions-Policy': 'geolocation=(), microphone=(), camera=(), payment=()',
+  // HSTS
+  newResponse.headers.set(
+    "Strict-Transport-Security",
+    "max-age=31536000; includeSubDomains; preload"
+  );
 
-    // CSP (Content Security Policy)
-    'Content-Security-Policy': [
-      "default-src 'self'",
-      "script-src 'self' https://cdn.jsdelivr.net https://js.sentry-cdn.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: https: blob:",
-      "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' https://*.supabase.co https://sentry.io https://api.qrserver.com",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'"
-    ].join('; '),
+  // Permissions Policy
+  newResponse.headers.set(
+    "Permissions-Policy",
+    "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+  );
 
-    // HSTS (HTTP Strict Transport Security)
-    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-
-    // Disable caching for sensitive content
-    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
-    'Pragma': 'no-cache',
-    'Expires': '0'
-  };
-}
+  return newResponse;
+});

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio de Eventos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=DM+Mono:wght@300;400&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --panel: #141414;
+      --border: #252525;
+      --text: #f0ece6;
+      --muted: #666;
+      --accent: #e8ff47;
+      --accent2: rgba(232,255,71,0.1);
+      --mono: 'DM Mono', monospace;
+      --display: 'Big Shoulders Display', sans-serif;
+      --body: 'Barlow', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      padding: 60px 32px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-title {
+      font-family: var(--display);
+      font-size: 2.4rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .header-subtitle {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 60px 32px;
+    }
+
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .event-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .event-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-4px);
+    }
+
+    .event-cover {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: block;
+    }
+
+    .event-body {
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .event-name {
+      font-family: var(--display);
+      font-size: 1.2rem;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .event-date {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .event-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.4;
+      margin-bottom: 16px;
+    }
+
+    .event-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: var(--accent);
+      color: var(--bg);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      width: fit-content;
+    }
+
+    .event-link:hover {
+      background: #f5ff7a;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .error {
+      background: rgba(255, 79, 79, 0.1);
+      border: 1px solid rgba(255, 79, 79, 0.3);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      color: #ff4f4f;
+    }
+
+    @media (max-width: 600px) {
+      .events-grid { grid-template-columns: 1fr; }
+      .header-title { font-size: 1.6rem; }
+      main { padding: 40px 20px; }
+      header { padding: 40px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-title" id="clientName">—</div>
+  <div class="header-subtitle" id="clientDate">Carregando eventos...</div>
+</header>
+
+<main>
+  <div class="events-grid" id="eventsGrid"></div>
+  <div class="loading" id="loading">Carregando eventos...</div>
+  <div class="error" id="error" style="display:none;"></div>
+</main>
+
+<script src="supabase-config.js"></script>
+<script>
+(async () => {
+  const slug = window.location.pathname.split('/').pop();
+  const grid = document.getElementById('eventsGrid');
+  const loading = document.getElementById('loading');
+  const error = document.getElementById('error');
+  const clientNameEl = document.getElementById('clientName');
+  const clientDateEl = document.getElementById('clientDate');
+
+  try {
+    // Buscar cliente
+    const { data: client, error: clientErr } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (clientErr || !client) throw new Error('Cliente não encontrado');
+
+    clientNameEl.textContent = client.name;
+    clientDateEl.textContent = `${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`;
+
+    // Buscar eventos
+    const { data: events, error: eventsErr } = await supabase
+      .from('events')
+      .select('*, share_links(token)')
+      .eq('client_id', client.id)
+      .eq('status', 'active')
+      .order('event_date', { ascending: false });
+
+    if (eventsErr) throw eventsErr;
+
+    loading.style.display = 'none';
+
+    if (!events || events.length === 0) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--muted); padding: 40px;">Nenhum evento disponível</div>';
+      return;
+    }
+
+    grid.innerHTML = events.map(event => {
+      const token = event.share_links?.[0]?.token;
+      const eventLink = token ? `/gallery/share/${token}` : '#';
+      const eventDate = new Date(event.event_date).toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      return `
+        <div class="event-card">
+          <img src="${event.cover_image_url || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 9%22%3E%3CdRect fill=%22%23667eea%22 width=%2216%22 height=%229%22/%3E%3C/svg%3E'}" alt="${event.name}" class="event-cover">
+          <div class="event-body">
+            <div>
+              <div class="event-name">${event.name}</div>
+              <div class="event-date">${eventDate}</div>
+              ${event.description ? `<div class="event-desc">${event.description}</div>` : ''}
+            </div>
+            <a href="${eventLink}" class="event-link">Ver fotos →</a>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    loading.style.display = 'none';
+    error.style.display = 'block';
+    error.textContent = `Erro: ${err.message}`;
+    console.error(err);
+  }
+})();
+</script>
+
+</body>
+</html>

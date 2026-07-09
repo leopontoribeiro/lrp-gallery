@@ -1,0 +1,28 @@
+name: smoke
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '0 */6 * * *'   # a cada 6h
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: syntax check (todos os .js)
+        run: |
+          rc=0
+          for f in *.js; do
+            node --check "$f" || rc=1
+          done
+          for f in r2-signed-worker/src/*.js; do
+            node --input-type=module --check < "$f" || rc=1
+          done
+          exit $rc
+      - name: smoke test
+        env:
+          SMOKE_TOKEN: ${{ secrets.SMOKE_TOKEN }}
+        run: node smoke-test.mjs

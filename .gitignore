@@ -1,1 +1,24 @@
-.vercel
+# Dependências
+node_modules/
+**/node_modules/
+
+# Segredos — NUNCA versionar
+.env
+.env.*
+**/.env
+**/.env.*
+**/SIGNING_SECRET*.txt
+*.local.txt
+
+# Build / deploy (não vão pro repo)
+.wrangler/
+**/.wrangler/
+.vercel/
+**/.vercel/
+PUBLICAR/
+dist/
+
+# Uploads e temporários
+uploads/
+.DS_Store
+Thumbs.db

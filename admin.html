@@ -6,6 +6,8 @@
 <title>Admin · @eusouleandroribeiro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=DM+Mono:wght@300;400&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="admin-login.js"></script>
+<script src="sentry-config.js"></script>
 <style>
 :root {
   --bg: #0d0d0d;
@@ -998,6 +1000,9 @@ body {
 
 .mobile-menu-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; }
 </style>
+<link rel="stylesheet" href="admin-gallery-actions.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link rel="stylesheet" href="admin-gallery-actions.css">
 </head>
 <body>
 
@@ -1041,6 +1046,10 @@ body {
       <button class="nav-item" id="nav-new" onclick="goTo('new')">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         Nova Galeria
+      </button>
+      <button class="nav-item" id="nav-groups" onclick="goTo('groups')">
+        <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><circle cx="9" cy="7" r="2.5" fill="none"/><circle cx="15" cy="7" r="4"/><circle cx="15" cy="7" r="2.5" fill="none"/><path d="M9 11v3c0 2.21-1.79 4-4 4H5c-2.21 0-4-1.79-4-4v-3M15 11v3c0 2.21 1.79 4 4 4h0c2.21 0 4-1.79 4-4v-3"/></svg>
+        Grupos de Galerias
       </button>
 
       <span class="nav-label">Sistema</span>
@@ -1091,6 +1100,10 @@ body {
         <button class="btn btn-primary" onclick="goTo('new')">
           <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nova Galeria
+        </button>
+        <button class="btn btn-ghost" onclick="createGroupClean()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="17.5" y1="14" x2="17.5" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/></svg>
+          Criar Grupo
         </button>
       </div>
     </div>
@@ -1186,6 +1199,10 @@ body {
             <button class="btn btn-ghost" onclick="previewGallery()">
               <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               Ver galeria
+            </button>
+            <button class="btn btn-ghost" onclick="assignGalleryToGroup()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="17.5" y1="14" x2="17.5" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/></svg>
+              Adicionar a grupo
             </button>
             <button class="btn btn-danger" onclick="deleteCurrentGallery()">
               <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
@@ -1538,11 +1555,19 @@ body {
         </div>
       </div>
 
+      <!-- ── GRUPOS DE GALERIAS ── -->
+      <div class="screen" id="screen-groups">
+        <div id="gallery-groups-container"></div>
+      </div>
+
       <!-- LGPD ANALYTICS (TASK #22) -->
       <div id="lgpd-analytics"></div>
 
       <!-- LGPD RIGHTS PORTAL (TASK #23) -->
       <div id="lgpd-rights"></div>
+
+      <!-- CLIENTS & EVENTS ADMIN -->
+      <div id="clients-events-admin"></div>
 
     </div>
   </main>
@@ -1612,6 +1637,9 @@ body {
 <script src="admin-analytics.js"></script>
 <script src="admin-galleries.js"></script>
 <script src="admin-detail.js"></script>
+<script src="admin-gallery-actions.js"></script>
+<script src="admin-gallery-groups.js"></script>
+<script src="admin-groups-clean.js"></script>
 <script>
 // ── SUPABASE ──
 const sb = getSupabase();
@@ -1674,6 +1702,12 @@ async function checkAuth() {
     if (!(await ensureAal2())) return false;
     document.getElementById('login-gate').style.display = 'none';
     document.getElementById('app').style.display = 'grid';
+
+    // ── Inicializar módulos de admin actions e gallery groups ──
+    if (typeof initAdminActions === 'function') {
+      try { initAdminActions(sb, { userId: data.session.user.id }); } catch(e) { console.error('Erro ao inicializar Admin Actions:', e); }
+    }
+
     refreshSelectionsBadge();
     return true;
   }
@@ -1820,12 +1854,14 @@ let currentGalleryCoverPhotoId = null;
 let coverEditorPhotoId = null;
 let coverEditorPosX = 50;
 let coverEditorPosY = 50;
+let galleryGroupsAdmin = null;
 
 // ── NAVIGATION ──
 const SCREENS = {
   dashboard: { title: 'Galerias',       nav: 'nav-dashboard' },
   new:       { title: 'Nova Galeria',   nav: 'nav-new'       },
   detail:    { title: 'Galeria',        nav: null            },
+  groups:    { title: 'Grupos de Galerias', nav: 'nav-groups' },
   analytics: { title: 'Analytics',      nav: 'nav-analytics' },
   selections:{ title: 'Seleções',       nav: 'nav-selections'},
   sales:     { title: 'Vendas',         nav: 'nav-sales'     },
@@ -1858,6 +1894,7 @@ function goTo(screen) {
 
   if(screen === 'dashboard') renderDashboard();
   if(screen === 'new')       resetNewForm();
+  if(screen === 'groups')    initGalleryGroups();
   if(screen === 'analytics') initAnalyticsScreen();
   if(screen === 'selections')initSelectionsScreen();
   if(screen === 'sales')     initSalesScreen();
@@ -1884,6 +1921,19 @@ zone.addEventListener('drop', e => {
 // ── COVER EDITOR/SETTINGS: extraído para admin-detail.js ──
 // ── BACKUP: extraído para admin-backup.js ──
 
+// ── GALLERY GROUPS: Inicializar grupos de galerias ──
+async function initGalleryGroups() {
+  const container = document.getElementById('gallery-groups-container');
+  if (!container) return;
+  try {
+    // Versão limpa (sobre gallery_groups + galleries.gallery_group_id).
+    await renderGroupsClean();
+  } catch (err) {
+    console.error('Erro ao inicializar grupos:', err);
+    container.innerHTML = '<div style="color: var(--red); padding: 20px;">Erro ao carregar grupos de galerias</div>';
+  }
+}
+
 // ── INIT ──
 (async () => {
   if (await checkAuth()) { renderDashboard(); }
@@ -1898,6 +1948,12 @@ zone.addEventListener('drop', e => {
 
 <!-- TASK #26: E2E Tests -->
 <script src="test-lgpd-e2e.js"></script>
+
+<!-- CLIENTS & EVENTS ADMIN (v2 - Com QR Codes + Auth + Security) -->
+<script src="admin-clients-events-v2.js"></script>
+
+<!-- ADMIN GALLERY ACTIONS (QR, Toggle, Cover, Delete, Download) -->
+<script src="admin-gallery-actions.js"></script>
 
 </body>
 </html>

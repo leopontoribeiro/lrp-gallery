@@ -36,26 +36,54 @@ CREATE INDEX IF NOT EXISTS idx_photo_events_type    ON photo_events (event_type)
 CREATE INDEX IF NOT EXISTS idx_photo_events_date    ON photo_events (created_at);
 
 -- 3. Row Level Security
--- (Se RLS ainda não estiver habilitado nessas tabelas, habilite:)
--- ALTER TABLE galleries     ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE photos        ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE photo_events  ENABLE ROW LEVEL SECURITY;
+-- ------------------------------------------------------------
+ALTER TABLE galleries     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE photos        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE photo_events  ENABLE ROW LEVEL SECURITY;
 
--- Política: anon pode ler galleries (UUID já é unguessable)
--- CREATE POLICY "anon_select_galleries" ON galleries
---   FOR SELECT TO anon USING (true);
+-- anon: somente leitura em galleries e photos
+CREATE POLICY "anon_select_galleries" ON galleries
+  FOR SELECT TO anon USING (true);
 
--- Política: anon pode ler fotos
--- CREATE POLICY "anon_select_photos" ON photos
---   FOR SELECT TO anon USING (true);
+CREATE POLICY "anon_select_photos" ON photos
+  FOR SELECT TO anon USING (true);
 
--- Política: anon pode inserir eventos (tracking)
--- CREATE POLICY "anon_insert_events" ON photo_events
---   FOR INSERT TO anon WITH CHECK (true);
+-- anon: inserir e ler eventos de tracking
+CREATE POLICY "anon_insert_events" ON photo_events
+  FOR INSERT TO anon WITH CHECK (true);
 
--- Política: anon pode ler eventos (para analytics no admin)
--- CREATE POLICY "anon_select_events" ON photo_events
---   FOR SELECT TO anon USING (true);
+CREATE POLICY "anon_select_events" ON photo_events
+  FOR SELECT TO anon USING (true);
+
+-- authenticated (admin): acesso total
+CREATE POLICY "auth_all_galleries" ON galleries
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE POLICY "auth_all_photos" ON photos
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE POLICY "auth_all_events" ON photo_events
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- 4. Índice em access_token (lookup rápido pelo link do cliente)
+-- ------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_galleries_access_token ON galleries (access_token);
+
+-- 5. Função para reordenar fotos em lote (1 request vs N)
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION batch_update_photo_positions(updates jsonb)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  item jsonb;
+BEGIN
+  FOR item IN SELECT * FROM jsonb_array_elements(updates)
+  LOOP
+    UPDATE photos
+       SET position = (item->>'position')::int
+     WHERE id = (item->>'id')::bigint;
+  END LOOP;
+END;
+$$;
 
 -- NOTA SOBRE SEGURANÇA:
 -- O UUID v4 do Supabase tem 122 bits de entropia (~5×10^36 combinações).

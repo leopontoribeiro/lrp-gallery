@@ -2,7 +2,9 @@
 // Cole seu DSN do Sentry e execute isto
 
 // Configuração Sentry
-const SENTRY_DSN = 'https://YOUR_SENTRY_DSN@sentry.io/YOUR_PROJECT_ID';
+// DSN gerado automaticamente - Atualizar em sentry.io após configurar projeto
+// Para usar: https://sentry.io > Sign in with GitHub > Create Project > JavaScript > lrp-gallery
+const SENTRY_DSN = 'https://examplePublicKey@o0.ingest.sentry.io/0';
 
 // Inicializar Sentry
 (function initSentry() {

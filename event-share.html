@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fotos do Evento</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=DM+Mono:wght@300;400&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --panel: #141414;
+      --border: #252525;
+      --text: #f0ece6;
+      --muted: #666;
+      --accent: #e8ff47;
+      --mono: 'DM Mono', monospace;
+      --display: 'Big Shoulders Display', sans-serif;
+      --body: 'Barlow', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 40px 32px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .header-meta {
+      display: flex;
+      gap: 20px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 32px;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .gallery-item {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border-radius: 4px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .gallery-item:hover {
+      border-color: var(--accent);
+      transform: scale(1.02);
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .error {
+      background: rgba(255, 79, 79, 0.1);
+      border: 1px solid rgba(255, 79, 79, 0.3);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      color: #ff4f4f;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .expiration-warning {
+      background: rgba(232,255,71,0.1);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 30px;
+      color: var(--accent);
+      font-size: 0.9rem;
+    }
+
+    .expiration-warning strong {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    @media (max-width: 600px) {
+      .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+      .header-title { font-size: 1.4rem; }
+      main { padding: 30px 20px; }
+      header { padding: 30px 20px; }
+      .header-meta { flex-direction: column; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-content">
+    <div class="header-title" id="eventName">—</div>
+    <div class="header-meta">
+      <span id="eventDate">—</span>
+      <span id="photoCount">—</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="gallery-grid" id="gallery"></div>
+  <div class="loading" id="loading">Carregando fotos...</div>
+  <div class="error" id="error" style="display:none;"></div>
+  <div class="empty" id="empty" style="display:none;">Nenhuma foto disponível</div>
+</main>
+
+<script src="supabase-config.js"></script>
+<script>
+(async () => {
+  const token = window.location.pathname.split('/').pop();
+  const gallery = document.getElementById('gallery');
+  const loading = document.getElementById('loading');
+  const error = document.getElementById('error');
+  const empty = document.getElementById('empty');
+  const eventNameEl = document.getElementById('eventName');
+  const eventDateEl = document.getElementById('eventDate');
+  const photoCountEl = document.getElementById('photoCount');
+
+  try {
+    // Buscar share link
+    const { data: link, error: linkErr } = await supabase
+      .from('share_links')
+      .select('*, events(*)')
+      .eq('token', token)
+      .single();
+
+    if (linkErr || !link) throw new Error('Link não encontrado');
+    if (link.expires_at && new Date(link.expires_at) < new Date()) {
+      throw new Error('Link expirado');
+    }
+
+    const event = link.events;
+    eventNameEl.textContent = event.name;
+    eventDateEl.textContent = new Date(event.event_date).toLocaleDateString('pt-BR', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+
+    // Buscar galerias do evento
+    const { data: galleries, error: galErr } = await supabase
+      .from('galleries')
+      .select('id, name, cover_photo_url')
+      .eq('event_id', event.id);
+
+    if (galErr) throw galErr;
+
+    // Incrementar view count
+    await supabase
+      .from('share_links')
+      .update({ view_count: (link.view_count || 0) + 1 })
+      .eq('id', link.id);
+
+    loading.style.display = 'none';
+
+    // Mostrar aviso de expiração se aplicável
+    if (event.auto_delete_enabled && event.delete_after_days) {
+      const daysRemaining = Math.max(0, event.delete_after_days - Math.floor((new Date() - new Date(event.created_at)) / (1000 * 60 * 60 * 24)));
+      const warningHTML = `
+        <div class="expiration-warning">
+          <strong>⚠️ Este álbum será deletado em ${daysRemaining} dias</strong>
+          Faça o download das suas fotos antes da data de expiração.
+        </div>
+      `;
+      gallery.innerHTML = warningHTML + '<div class="gallery-grid" id="photos-grid"></div>';
+    }
+
+    if (!galleries || galleries.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+
+    photoCountEl.textContent = `${galleries.length} ${galleries.length === 1 ? 'galeria' : 'galerias'}`;
+
+    gallery.innerHTML = galleries.map(gal => `
+      <div class="gallery-item" onclick="window.location.href='/gallery/${gal.id}'">
+        <img src="${gal.cover_photo_url || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22%3E%3CdRect fill=%22%23667eea%22 width=%221%22 height=%221%22/%3E%3C/svg%3E'}" alt="${gal.name}" loading="lazy">
+      </div>
+    `).join('');
+
+  } catch (err) {
+    loading.style.display = 'none';
+    error.style.display = 'block';
+    error.textContent = `Erro: ${err.message}`;
+    console.error(err);
+  }
+})();
+</script>
+
+</body>
+</html>
