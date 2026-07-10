@@ -1200,13 +1200,16 @@ body {
               <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               Ver galeria
             </button>
+            <button class="btn btn-ghost" onclick="qrCurrentGallery()">QR Code</button>
+            <button class="btn btn-ghost" onclick="renameCurrentGallery()">Renomear</button>
+            <button class="btn btn-ghost" onclick="toggleCurrentGalleryShare()">Ligar / Desligar</button>
             <button class="btn btn-ghost" onclick="assignGalleryToGroup()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="17.5" y1="14" x2="17.5" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/></svg>
               Adicionar a grupo
             </button>
             <button class="btn btn-danger" onclick="deleteCurrentGallery()">
               <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-              Excluir
+              Apagar
             </button>
           </div>
         </div>
@@ -1637,8 +1640,6 @@ body {
 <script src="admin-analytics.js"></script>
 <script src="admin-galleries.js"></script>
 <script src="admin-detail.js"></script>
-<script src="admin-gallery-actions.js"></script>
-<script src="admin-gallery-groups.js"></script>
 <script src="admin-groups-clean.js"></script>
 <script>
 // ── SUPABASE ──
@@ -1951,9 +1952,6 @@ async function initGalleryGroups() {
 
 <!-- CLIENTS & EVENTS ADMIN (v2 - Com QR Codes + Auth + Security) -->
 <script src="admin-clients-events-v2.js"></script>
-
-<!-- ADMIN GALLERY ACTIONS (QR, Toggle, Cover, Delete, Download) -->
-<script src="admin-gallery-actions.js"></script>
 
 </body>
 </html>

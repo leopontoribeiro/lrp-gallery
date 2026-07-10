@@ -1,2 +1,5 @@
-/admin    /admin.html    200
-/albums   /albums.html   200
+# Vazio de propósito.
+# /admin e /albums são servidos automaticamente pelo Cloudflare Pages a partir
+# de admin.html / albums.html (clean URL) — igual a /admin-login, /privacy, /grupo.
+# As regras "200" que existiam aqui conflitavam com as Pages Functions
+# (função do preview do WhatsApp) e causavam "Worker threw exception". Removidas.

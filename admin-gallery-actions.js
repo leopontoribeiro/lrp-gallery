@@ -377,9 +377,3 @@ if (document.readyState === 'loading') {
     }
   });
 }
-
-// Instanciar globalmente
-let adminActions;
-function initAdminActions(supabaseClient, adminPanel) {
-  adminActions = new AdminGalleryActions(supabaseClient, adminPanel);
-}

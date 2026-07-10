@@ -271,6 +271,40 @@ function previewGallery() {
   window.open(`${BASE_URL}/gallery.html?t=${g.access_token}`, '_blank');
 }
 
+// ── AÇÕES DA GALERIA ABERTA (mesmas da galeria-mãe) ──
+async function renameCurrentGallery() {
+  if (!currentGalleryId) return;
+  const cur = document.getElementById('detail-title')?.textContent || '';
+  const name = prompt('Novo nome da galeria:', cur);
+  if (name == null) return;
+  const clean = name.trim(); if (!clean) { toast('Nome vazio', 'error'); return; }
+  const { error } = await sb.from('galleries').update({ name: clean }).eq('id', currentGalleryId);
+  if (error) { toast('Erro ao renomear: ' + error.message, 'error'); return; }
+  document.getElementById('detail-title').textContent = clean.toUpperCase();
+  const tb = document.getElementById('topbar-title'); if (tb) tb.textContent = clean.toUpperCase();
+  try { logAdminAction('rename_gallery', { galleryId: currentGalleryId, name: clean }); } catch(e) {}
+  toast('Galeria renomeada', 'success');
+  if (typeof renderDashboard === 'function') renderDashboard();
+}
+
+async function toggleCurrentGalleryShare() {
+  if (!currentGalleryId) return;
+  const { data: g } = await sb.from('galleries').select('status').eq('id', currentGalleryId).maybeSingle();
+  const next = (g && g.status === 'live') ? 'draft' : 'live';
+  const { error } = await sb.from('galleries')
+    .update({ status: next, sharing_enabled: next === 'live' }).eq('id', currentGalleryId);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  toast(next === 'live' ? 'Compartilhamento ligado — link ativo' : 'Compartilhamento desligado — link não abre', next === 'live' ? 'success' : '');
+  if (typeof renderDashboard === 'function') renderDashboard();
+}
+
+function qrCurrentGallery() {
+  const link = document.getElementById('detail-link')?.textContent;
+  if (!link || link === '—') { toast('Link indisponível', 'error'); return; }
+  if (typeof showQRForLink === 'function') showQRForLink(link);
+  else toast('QR indisponível', 'error');
+}
+
 // ── COVER EDITOR ──
 function openCoverEditor(photoId, photoUrl, e) {
   if (e) e.stopPropagation();
