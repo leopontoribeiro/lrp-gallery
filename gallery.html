@@ -3,22 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Galeria · @eusouleandroribeiro</title>
-<meta name="description" content="Galeria de fotos por @eusouleandroribeiro">
+<title>Galeria · another.</title>
+<meta name="description" content="Galeria de fotos por another.">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="@eusouleandroribeiro">
-<meta property="og:title" id="og-title" content="Galeria · @eusouleandroribeiro">
+<meta property="og:site_name" content="another.">
+<meta property="og:title" id="og-title" content="Galeria · another.">
 <meta property="og:description" content="Veja as fotos do evento">
 <meta property="og:image" id="og-image" content="">
+<meta property="og:image:secure_url" id="og-image-secure" content="">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="Capa da galeria">
 <meta property="og:url" id="og-url" content="">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" id="tw-title" content="Galeria · @eusouleandroribeiro">
+<meta name="twitter:title" id="tw-title" content="Galeria · another.">
 <meta name="twitter:image" id="tw-image" content="">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase-config.js"></script>
 <script src="gallery-utils.js"></script>
 <script src="gallery-facial.js"></script>
 <script src="gallery-paywall.js"></script>
+<script src="gallery-storage.js"></script>
 <script src="gallery-selection.js"></script>
 <script src="gallery-gate.js"></script>
 <script src="gallery-consent-lgpd.js"></script>
@@ -62,6 +66,31 @@ body {
   pointer-events: none;
 }
 
+/* Aviso de expiração — fica logo abaixo do header, acompanha o fade dele. */
+#expiry-banner {
+  display: none; position: fixed; top: 56px; left: 0; right: 0; z-index: 199;
+  background: #78350f; color: #fff; padding: 11px 16px;
+  align-items: center; gap: 10px 12px; flex-wrap: wrap;
+  font-family: 'Barlow', sans-serif; font-size: .8rem; line-height: 1.45;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25); transition: opacity .3s;
+}
+#expiry-text { flex: 1 1 240px; min-width: 0; }
+#expiry-cta {
+  flex: 0 0 auto; background: #fff; color: #1a1a1a; border: none; border-radius: 7px;
+  padding: 8px 14px; font-weight: 700; font-size: .76rem; cursor: pointer;
+  font-family: 'Barlow', sans-serif; white-space: nowrap;
+}
+#expiry-close {
+  flex: 0 0 auto; background: none; border: none; color: rgba(255,255,255,.75);
+  font-size: 1.25rem; line-height: 1; cursor: pointer; padding: 0 2px;
+  position: absolute; top: 8px; right: 10px;
+}
+@media (max-width: 560px) {
+  #expiry-banner { padding: 10px 34px 10px 14px; font-size: .74rem; gap: 8px; }
+  #expiry-text { flex: 1 1 100%; }
+  #expiry-cta { width: 100%; padding: 9px 12px; }
+}
+
 /* Mobile: esconde a barra de PERSONALIZAÇÃO (foto/espaço/fundo), mantendo
    favoritos e download. Foco em ver e baixar. */
 @media (max-width: 768px) {
@@ -80,15 +109,21 @@ body {
   background: linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.8));
 }
 #intro-brand > * { position: relative; z-index: 1; }
-#intro-brand .ib-name {
-  font-family: 'Oswald', sans-serif; font-weight: 700; text-transform: uppercase;
-  font-size: clamp(1.9rem, 6vw, 3.2rem); letter-spacing: .04em; line-height: 1;
+#intro-brand .ib-brand {
+  display: flex; align-items: baseline; justify-content: center;
+  gap: 16px; flex-wrap: wrap;
 }
-#intro-brand .ib-tag {
-  font-family: 'Barlow', sans-serif; color: #dcdcdc; margin-top: 10px;
-  font-size: clamp(.92rem, 2.6vw, 1.12rem); letter-spacing: .02em;
+#intro-brand .ib-logo {
+  font-family: Georgia, 'Times New Roman', serif; font-weight: 700;
+  font-size: clamp(1.9rem, 6vw, 3.2rem); letter-spacing: .01em; line-height: 1; color: #fff;
 }
-#intro-brand .ib-tag b { color: #FF6A00; font-weight: 600; }
+#intro-brand .ib-logo .ib-dot { color: #e5352b; }
+#intro-brand .ib-brand-tag {
+  font-family: 'Barlow', sans-serif; color: #dcdcdc;
+  font-size: clamp(.85rem, 2.2vw, 1.05rem); letter-spacing: .12em; text-transform: uppercase;
+  padding-left: 16px; border-left: 1.5px solid rgba(255,255,255,.35);
+}
+@media (max-width: 480px) { #intro-brand .ib-brand-tag { border-left: none; padding-left: 0; } }
 #intro-brand .ib-links { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 22px; }
 #intro-brand .ib-btn {
   padding: 11px 20px; border-radius: 999px; font-family: 'Oswald', sans-serif;
@@ -99,6 +134,14 @@ body {
 #intro-brand .ib-btn.primary { background: #FF6A00; border-color: #FF6A00; color: #000; }
 #intro-brand .ib-btn.primary:hover { background: #ff7d22; }
 @media (max-width: 700px) { #intro-brand { padding: 44px 18px; min-height: 260px; } }
+
+#cover .res-links { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
+#cover .res-btn {
+  padding: 9px 18px; border-radius: 999px; font-family: 'Oswald', sans-serif;
+  font-weight: 600; text-transform: uppercase; letter-spacing: .06em; font-size: .74rem;
+  text-decoration: none; border: 1.5px solid rgba(255,255,255,.5); color: #fff; transition: all .2s;
+}
+#cover .res-btn:hover { background: #FF6A00; border-color: #FF6A00; color: #000; }
 
 .logo-wrap { display: flex; flex-direction: column; line-height: 1.15; }
 
@@ -117,10 +160,10 @@ body {
 
 .hamburger {
   background: none; border: none; cursor: pointer;
-  padding: 6px; display: flex; flex-direction: column; gap: 5px;
+  padding: 8px; display: flex; flex-direction: column; gap: 6px;
 }
 .hamburger span {
-  display: block; width: 22px; height: 1.5px;
+  display: block; width: 25px; height: 3px;
   background: #1a1a1a; border-radius: 2px; transition: background 0.35s;
 }
 
@@ -174,7 +217,7 @@ body.bg-dark .bar-btn-primary:hover { background: #d0e838; }
   font-weight: 900;
   color: #fff; letter-spacing: 0.05em; text-transform: uppercase;
   line-height: 1.05;
-  word-break: break-word; overflow-wrap: break-word;
+  word-break: keep-all; overflow-wrap: normal; hyphens: none;
   max-width: 100%;
   text-shadow: 0 2px 24px rgba(0,0,0,0.4);
 }
@@ -284,12 +327,12 @@ body.bg-dark .masonry.size-frame .photo-card {
   width: 32px; height: 32px; border-radius: 50%;
   background: rgba(255,255,255,0.88); border: none;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
-  opacity: 0; transform: scale(0.8);
+  opacity: 0.9; transform: scale(1);
   transition: opacity 0.18s, transform 0.18s cubic-bezier(0.34,1.56,0.64,1);
   box-shadow: 0 1px 5px rgba(0,0,0,0.15);
 }
 .photo-card:hover .card-heart, .photo-card.liked .card-heart {
-  opacity: 1; transform: scale(1);
+  opacity: 1; transform: scale(1.05);
 }
 .card-heart svg { width: 15px; height: 15px; stroke: #bbb; fill: none; stroke-width: 1.8; transition: all 0.18s; }
 .photo-card.liked .card-heart svg { stroke: #e04444; fill: #e04444; }
@@ -462,12 +505,6 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
 }
 
 /* ── PHOTO ANIMATIONS ── */
-@keyframes lbSlideInRight { from { opacity:0; transform:translateX(36px) scale(0.97); } to { opacity:1; transform:none; } }
-@keyframes lbSlideInLeft  { from { opacity:0; transform:translateX(-36px) scale(0.97); } to { opacity:1; transform:none; } }
-@keyframes lbFadeIn       { from { opacity:0; transform:scale(0.96); } to { opacity:1; transform:none; } }
-.lb-anim-right { animation: lbSlideInRight 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both; }
-.lb-anim-left  { animation: lbSlideInLeft  0.28s cubic-bezier(0.25,0.46,0.45,0.94) both; }
-.lb-anim-open  { animation: lbFadeIn       0.30s cubic-bezier(0.25,0.46,0.45,0.94) both; }
 
 .lb-bottombar {
   background: #fff; border-top: 1px solid #efefef;
@@ -503,6 +540,23 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
   text-align: left; width: 100%; transition: color 0.15s;
 }
 .drawer-item:hover { color: #888; }
+.drawer-divider { height: 1px; background: #f0f0f0; margin: 4px 0; }
+.drawer-label {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.68rem; font-weight: 700; color: #999;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  padding: 10px 0 2px;
+}
+.drawer-group-item {
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.9rem; font-weight: 600; color: #444;
+  letter-spacing: 0.03em;
+  padding: 8px 0 8px 12px; border: none; border-bottom: 1px solid #f7f7f7;
+  cursor: pointer; background: none; text-align: left; width: 100%;
+  transition: color 0.15s;
+}
+.drawer-group-item:hover { color: #888; }
+.drawer-group-item.active { color: #1a1a1a; font-weight: 800; }
 .drawer-close {
   position: absolute; top: 20px; right: 20px;
   background: none; border: none; cursor: pointer; padding: 6px; line-height: 0;
@@ -868,17 +922,29 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
 <!-- HEADER -->
 <header id="site-header" class="hidden-on-cover">
   <div class="logo-wrap">
-    <span class="logo-name">@eusouleandroribeiro</span>
-    <span class="logo-slogan">Criatividade em Atividade</span>
+    <span class="logo-name" style="font-family:Georgia,'Times New Roman',serif;text-transform:none;letter-spacing:0">another<span style="color:#e5352b">.</span></span>
+    <span class="logo-slogan">photos and stories</span>
   </div>
   <button class="hamburger" onclick="openDrawer()"><span></span><span></span></button>
 </header>
+
+<!-- AVISO DE EXPIRAÇÃO (2 meses, 1 mês, depois semanal) -->
+<div id="expiry-banner">
+  <span id="expiry-text"></span>
+  <button id="expiry-cta" onclick="openStorageModal()">Manter para sempre</button>
+  <button id="expiry-close" onclick="dismissExpiryBanner()" aria-label="Fechar aviso">&times;</button>
+</div>
 
 <!-- COVER -->
 <section id="cover" onclick="scrollToGrid()">
   <img id="cover-img" src="" alt="Cover" crossorigin="anonymous">
   <div class="cover-content">
+    <div class="cover-user" style="font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:.95rem;letter-spacing:.02em;color:rgba(255,255,255,.92);margin-bottom:8px">another<span style="color:#e5352b">.</span></div>
     <h1 class="cover-title" id="coverTitle"></h1>
+    <div class="res-links" id="res-links" style="display:none">
+      <a class="res-btn" id="res-btn-hi" href="#" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:none">Fotos em alta</a>
+      <a class="res-btn" id="res-btn-lo" href="#" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:none">Fotos em baixa</a>
+    </div>
     <div class="cover-arrow">
       <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
@@ -887,12 +953,45 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
 
 <!-- GRID -->
 <div id="intro-brand" style="background-image:url('https://www.souleandroribeiro.com.br/og.jpg')">
-  <div class="ib-name">Leandro Ribeiro</div>
-  <div class="ib-tag">Every story deserves <b>another perspective</b></div>
+  <div class="ib-brand">
+    <span class="ib-logo">another<span class="ib-dot">.</span></span>
+    <span class="ib-brand-tag">photos and stories</span>
+  </div>
   <div class="ib-links">
-    <a class="ib-btn" href="https://instagram.com/eusouleandroribeiro" target="_blank" rel="noopener">Instagram</a>
+    <a class="ib-btn" href="https://instagram.com/anothercombr" target="_blank" rel="noopener">Instagram</a>
     <a class="ib-btn primary" href="https://wa.me/5521983267661" target="_blank" rel="noopener">WhatsApp</a>
-    <a class="ib-btn" href="https://www.souleandroribeiro.com.br" target="_blank" rel="noopener">Portfólio</a>
+    <a class="ib-btn" href="https://www.another.com.br" target="_blank" rel="noopener">Portfólio</a>
+  </div>
+</div>
+
+<div id="video-row" style="display:none;max-width:1240px;margin:0 auto;padding:20px 20px 0;gap:14px;flex-wrap:wrap"></div>
+<div id="video-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:900;align-items:center;justify-content:center;padding:24px">
+  <button onclick="closeGalleryVideo()" style="position:absolute;top:18px;right:22px;background:none;border:none;color:#fff;font-size:1.8rem;line-height:1;cursor:pointer">✕</button>
+  <div style="max-width:900px;width:100%;text-align:center">
+    <video id="gv-player" controls playsinline style="width:100%;max-height:74vh;border-radius:8px;background:#000;display:block"></video>
+    <div style="margin-top:16px"><a id="gv-download" download style="display:inline-block;padding:11px 22px;background:#FF6A00;color:#0d0d0d;border-radius:9px;font-weight:700;font-size:.85rem;text-decoration:none">Salvar vídeo</a></div>
+  </div>
+</div>
+
+<div id="storage-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:900;align-items:center;justify-content:center;padding:24px">
+  <div style="max-width:380px;width:100%;background:#141414;border:1px solid #232323;border-radius:14px;padding:24px;text-align:center;font-family:'Barlow',sans-serif">
+    <div style="font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;color:#fff;font-size:1.1rem;margin-bottom:6px">Guardar para sempre</div>
+    <div style="color:#9a9a9a;font-size:.78rem;margin-bottom:18px">Mantenha esta galeria no ar sem prazo e/ou ganhe espaço pra subir seus próprios vídeos.</div>
+    <div id="sm-permanent-row" style="text-align:left;background:#1c1c1c;border:1px solid #2a2a2a;border-radius:8px;padding:12px;margin-bottom:14px">
+      <label style="display:flex;align-items:flex-start;gap:9px;color:#f0ece6;font-size:.82rem;cursor:pointer">
+        <input type="checkbox" id="sm-permanent" checked onchange="_updateStoragePrice()" style="margin-top:2px;flex-shrink:0">
+        <span><b>Galeria permanente — R$ 127,00</b><br>
+          <span style="color:#9a9a9a;font-size:.72rem">Pagamento único. O link nunca expira e suas fotos ficam no ar por tempo indeterminado.</span></span>
+      </label>
+    </div>
+    <div id="sm-perm-done" style="display:none;text-align:left;background:#14301f;border:1px solid #1f5233;border-radius:8px;padding:12px;margin-bottom:14px;color:#7fe0a5;font-size:.78rem">
+      ✓ Esta galeria já é permanente — não expira.
+    </div>
+    <label style="display:block;text-align:left;color:#ccc;font-size:.72rem;margin-bottom:4px">GB extras de vídeo</label>
+    <input type="number" id="sm-gb" min="0" step="0.5" value="0" oninput="_updateStoragePrice()" style="width:100%;padding:10px;background:#1c1c1c;border:1px solid #2a2a2a;border-radius:8px;color:#fff;margin-bottom:14px;box-sizing:border-box">
+    <div id="sm-price" style="color:#FF6A00;font-weight:700;font-size:1.1rem;margin-bottom:16px">R$ 0,00</div>
+    <button onclick="confirmBuyStorage()" style="width:100%;padding:12px;background:#FF6A00;color:#0d0d0d;border:none;border-radius:9px;font-weight:700;cursor:pointer">Ir para pagamento</button>
+    <button onclick="closeStorageModal()" style="width:100%;padding:10px;background:none;border:none;color:#888;margin-top:8px;cursor:pointer">Cancelar</button>
   </div>
 </div>
 
@@ -902,9 +1001,7 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
 </div>
 
 <footer style="text-align:center;padding:44px 20px 96px;color:#9a9a9a;font-size:.74rem;line-height:1.9;font-family:'Barlow',sans-serif">
-  <a href="https://instagram.com/eusouleandroribeiro" target="_blank" rel="noopener" style="color:#9a9a9a;text-decoration:none">Fotografia por @eusouleandroribeiro</a><br>
-  Produzido por <a href="https://www.another.com.br" target="_blank" rel="noopener" style="font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:.98rem;color:#9a9a9a;text-decoration:none">another<span style="color:#e5352b">.</span></a><br>
-  Direção criativa de Leandro Ribeiro.
+  Direção criativa de @eusouleandroribeiro
 </footer>
 
 <!-- BOTTOM BAR -->
@@ -996,7 +1093,7 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
     <button class="lb-nav-btn lb-nav-prev" onclick="lbNav(-1)" aria-label="Foto anterior">
       <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
-    <img id="lbImg" src="" alt="" crossorigin="anonymous">
+    <img id="lbImg" src="" alt="">
     <button class="lb-nav-btn lb-nav-next" onclick="lbNav(1)" aria-label="Próxima foto">
       <svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>
     </button>
@@ -1122,17 +1219,25 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
     <button class="drawer-close" onclick="closeDrawer()">
       <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
-    <button class="drawer-item" onclick="showAll(); closeDrawer()">Todas as fotos</button>
-    <button class="drawer-item" onclick="showLiked(); closeDrawer()">Só favoritas</button>
     <button class="drawer-item" id="drawer-facial" onclick="openFacial(); closeDrawer()">✨ Encontrar minhas fotos</button>
+    <a class="drawer-item" href="privacy.html" target="_blank" style="text-decoration:none;font-size:.72rem;opacity:.6">Política de privacidade</a>
+    <div class="drawer-divider"></div>
+    <button class="drawer-item" onclick="showAll(); closeDrawer()">Ver todas</button>
+    <button class="drawer-item" onclick="showLiked(); closeDrawer()">Ver favoritas</button>
+    <button class="drawer-item" id="drawer-dl-favs" onclick="downloadFavorites(); closeDrawer()">Salvar favoritas</button>
+    <div id="drawer-groups-section" style="display:none">
+      <div class="drawer-label">Ver grupos</div>
+      <div id="drawer-group-list"></div>
+      <button class="drawer-item" id="drawer-dl-group" onclick="downloadCurrentGroup(); closeDrawer()">Salvar grupo selecionado</button>
+    </div>
     <button class="drawer-item" onclick="openSelection(); closeDrawer()">Enviar seleção ao fotógrafo</button>
+    <button class="drawer-item" id="drawer-dl-all" onclick="downloadAll(); closeDrawer()">Salvar todas</button>
     <button class="drawer-item" id="drawer-buy" style="display:none" onclick="buyFavorites(); closeDrawer()">Comprar originais (favoritas)</button>
     <button class="drawer-item" id="drawer-buydl" style="display:none" onclick="downloadPurchased(); closeDrawer()">Baixar meus originais comprados</button>
     <button class="drawer-item" id="drawer-code" style="display:none" onclick="enterUnlockCode(); closeDrawer()">Tenho um código de desbloqueio</button>
-    <a class="drawer-item" href="privacy.html" target="_blank" style="text-decoration:none;font-size:.72rem;opacity:.6">Política de privacidade</a>
-    <button class="drawer-item" id="drawer-dl-favs" onclick="downloadFavorites(); closeDrawer()">Salvar favoritas</button>
-    <button class="drawer-item" id="drawer-dl-group" onclick="downloadCurrentGroup(); closeDrawer()">Salvar deste grupo</button>
-    <button class="drawer-item" id="drawer-dl-all" onclick="downloadAll(); closeDrawer()">Salvar todas</button>
+    <div class="drawer-divider"></div>
+    <button class="drawer-item" onclick="openStorageModal(); closeDrawer()">Guardar esta galeria para sempre</button>
+    <button class="drawer-item" id="drawer-add-video" style="display:none" onclick="pickClientVideo(); closeDrawer()">Adicionar meu vídeo</button>
   </div>
 </div>
 
@@ -1151,6 +1256,79 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
 <script>
 // ── CONFIG ──
 const sb = getSupabase();
+
+// Reencaixa o título da capa se a tela mudar de tamanho/orientação
+// (fitTitleText vem de gallery-utils.js).
+let _fitTitleResizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_fitTitleResizeTimer);
+  _fitTitleResizeTimer = setTimeout(() => fitTitleText(document.getElementById('coverTitle')), 150);
+});
+
+// ── VÍDEOS DA GALERIA (cards acima do grid de fotos) ──
+function _fmtDur(sec) {
+  if (!sec) return '';
+  const m = Math.floor(sec / 60), s = Math.round(sec % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+async function loadClientVideos(token) {
+  try {
+    const { data, error } = await sb.rpc('get_public_gallery_videos', { p_token: token });
+    if (error || !Array.isArray(data) || !data.length) return;
+    const row = document.getElementById('video-row');
+    row.style.display = 'flex';
+    row.innerHTML = data.map(v => `
+      <div data-vurl="${esc(v.video)}" data-vname="${esc(v.name)}" onclick="openGalleryVideo(this.dataset.vurl, this.dataset.vname)" style="cursor:pointer;width:180px;background:#141414;border:1px solid #232323;border-radius:10px;overflow:hidden">
+        <div style="aspect-ratio:16/9;background:#000;position:relative">
+          ${v.thumb ? `<img src="${v.thumb}" alt="${esc(v.name)}" style="width:100%;height:100%;object-fit:cover;display:block">` : ''}
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" width="34" height="34"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.55)"/><path d="M10 8l6 4-6 4V8z" fill="#fff"/></svg>
+          </div>
+          ${v.duration ? `<div style="position:absolute;bottom:5px;right:5px;background:rgba(0,0,0,.7);color:#fff;font-size:.62rem;padding:2px 5px;border-radius:4px">${_fmtDur(v.duration)}</div>` : ''}
+        </div>
+        <div style="padding:8px 10px;color:#f0ece6;font-size:.78rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(v.name)}</div>
+      </div>`).join('');
+
+    // Botões na capa, junto de "Fotos em alta/baixa" — um por vídeo, com o nome
+    // dele. Abrem o arquivo direto (target=_blank), então quem reproduz é o
+    // player nativo do aparelho, não um <video> embutido na página.
+    const links = document.getElementById('res-links');
+    if (links) {
+      links.querySelectorAll('.res-btn-video').forEach(el => el.remove());  // evita duplicar ao recarregar
+      data.forEach(v => {
+        const a = document.createElement('a');
+        a.className = 'res-btn res-btn-video';
+        a.href = v.video;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = v.name || 'Vídeo';
+        a.title = 'Abrir o vídeo';
+        a.onclick = e => e.stopPropagation();   // não deixa rolar pra grade
+        links.appendChild(a);
+      });
+      links.style.display = 'flex';
+    }
+
+    const wantVideo = new URLSearchParams(location.search).get('v');
+    if (wantVideo) {
+      const match = data.find(v => v.id === wantVideo);
+      if (match) openGalleryVideo(match.video, match.name);
+    }
+  } catch (e) {}
+}
+function openGalleryVideo(url, name) {
+  const player = document.getElementById('gv-player');
+  player.src = url;
+  const dl = document.getElementById('gv-download');
+  dl.href = url; dl.download = (name || 'video') + '.mp4';
+  document.getElementById('video-modal').style.display = 'flex';
+  player.play().catch(() => {});
+}
+function closeGalleryVideo() {
+  const player = document.getElementById('gv-player');
+  player.pause(); player.removeAttribute('src'); player.load();
+  document.getElementById('video-modal').style.display = 'none';
+}
 
 // ── LOG DE ERROS (observabilidade) ──
 let _errCount = 0;
@@ -1249,6 +1427,7 @@ async function init() {
       // Verifica expiração
       if (data.expires_at && new Date(data.expires_at) < new Date()) {
         document.getElementById('coverTitle').textContent = (data.name || '').toUpperCase();
+        fitTitleText(document.getElementById('coverTitle'));
         showExpiredOverlay();
         return;
       }
@@ -1271,8 +1450,15 @@ async function init() {
       _paywall        = !!(usingRpc && paywallEnabled && galleryPrice > 0);
       updatePaywallUI(); refreshPurchases(); handlePaidReturn(params);
 
-      document.title = data.name + ' · @eusouleandroribeiro';
-      const ogTitle = data.name + ' · @eusouleandroribeiro';
+      const hiBtn = document.getElementById('res-btn-hi'), loBtn = document.getElementById('res-btn-lo');
+      if (data.high_res_url) { hiBtn.href = data.high_res_url; hiBtn.style.display = 'inline-block'; }
+      if (data.low_res_url) { loBtn.href = data.low_res_url; loBtn.style.display = 'inline-block'; }
+      if (data.high_res_url || data.low_res_url) document.getElementById('res-links').style.display = 'flex';
+
+      document.title = data.name + ' · another.';
+      // og:site_name já mostra "another." — repetir aqui duplicava
+      // o nome no preview do WhatsApp (ex.: "Evento · another." + site_name).
+      const ogTitle = data.name;
       document.getElementById('og-title').content = ogTitle;
       document.getElementById('tw-title').content = ogTitle;
       document.getElementById('og-url').content   = window.location.href;
@@ -1288,7 +1474,7 @@ async function init() {
       const mapPhoto = p => ({
         id: p.id, name: p.filename, thumb: toThumb(p.thumb_url), full: p.full_url, lg: toLg(p.full_url),
         ratio: (p.width && p.height) ? p.width / p.height : null,
-        group: p.group_name || null
+        groups: parseTags(p.group_name)
       });
 
       let pageSize = 500;
@@ -1347,6 +1533,10 @@ async function init() {
       PHOTOS = allPhotos;
       buildGroupTabs();
       document.getElementById('coverTitle').textContent = data.name.toUpperCase();
+      fitTitleText(document.getElementById('coverTitle'));
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => fitTitleText(document.getElementById('coverTitle')));
+      }
 
       // Oculta botão de download se desabilitado
       if (!downloadEnabled) {
@@ -1371,6 +1561,10 @@ async function init() {
         document.getElementById('og-image').content = ogImgUrl;
         document.getElementById('tw-image').content = ogImgUrl;
       }
+      loadClientVideos(token);
+      refreshVideoQuota();
+      handleStorageReturn(params);
+      checkExpiryWarning(data.expires_at);
     } else {
       document.getElementById('coverTitle').textContent = 'GALERIA NÃO ENCONTRADA';
     }
