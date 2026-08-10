@@ -14,7 +14,7 @@ async function initAnalyticsScreen() {
   // Popula selector de galerias
   const sel = document.getElementById('analytics-gallery-select');
   sel.innerHTML = '<option value="">Selecione uma galeria</option>';
-  galleries.forEach(g => {
+  sortByCreatedDesc(galleries).forEach(g => {
     sel.innerHTML += `<option value="${g.id}">${esc(g.name)}</option>`;
   });
 }

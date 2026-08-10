@@ -103,18 +103,33 @@ class ConsentManager {
         };
     }
 
+    // Grava no servidor via RPC (migração 38). O insert direto na tabela nunca
+    // funcionou: a política de RLS exigia um usuário autenticado, e o visitante
+    // da galeria é anônimo. Todo consentimento existia só no localStorage.
+    // A RPC também registra IP e user-agent — é o que dá valor probatório.
     async saveToSupabase(consentRecord) {
         try {
-            const { error } = await sb.from('consent_records').insert([{
-                consent_data: consentRecord,
-                version: consentRecord.version,
-                accepted: consentRecord.accepted,
-                timestamp: consentRecord.timestamp
-            }]);
-
-            if (error) console.warn('Erro ao salvar consentimento no Supabase:', error);
+            const visitor = (typeof getVisitorId === 'function') ? getVisitorId() : null;
+            const token = (typeof _galleryToken !== 'undefined' && _galleryToken) ? _galleryToken
+                        : new URLSearchParams(location.search).get('t');
+            const { data, error } = await sb.rpc('record_biometric_consent', {
+                p_token: token,
+                p_visitor: visitor,
+                p_accepted: !!consentRecord.accepted,
+                p_version: consentRecord.version || null,
+                p_data: consentRecord
+            });
+            // Falha aqui não pode ser silenciosa: sem registro no servidor você
+            // fica sem prova de consentimento.
+            if (error || !data) {
+                if (typeof reportError === 'function') {
+                    reportError('consent-save', (error && error.message) || 'RPC devolveu vazio');
+                }
+                console.warn('Consentimento NÃO gravado no servidor:', error);
+            }
         } catch (e) {
-            console.warn('Supabase não disponível para consentimento:', e.message);
+            if (typeof reportError === 'function') reportError('consent-save', e.message);
+            console.warn('Falha ao gravar consentimento:', e.message);
         }
     }
 

@@ -20,13 +20,9 @@ function closeLightbox() {
 function setLbPhoto(photo, dir) {
   const img = document.getElementById('lbImg');
 
-  // Abertura instantânea: mostra o thumb (já em cache do grid) e anima na hora
-  img.classList.remove('lb-anim-right', 'lb-anim-left', 'lb-anim-open');
+  // Troca direta, sem fade: em cliques rápidos nas setas, qualquer transição de
+  // opacidade fica se interrompendo no meio e dá a impressão de fotos sobrepostas.
   img.src = photo.thumb;
-  void img.offsetWidth;          // força reflow para reiniciar animation
-  const cls = dir > 0 ? 'lb-anim-right' : dir < 0 ? 'lb-anim-left' : 'lb-anim-open';
-  img.classList.add(cls);
-  img.addEventListener('animationend', () => img.classList.remove(cls), { once: true });
 
   // Se fullUrlDeliveryDisabled e ainda não temos full_url, buscar via RPC
   if (fullUrlDeliveryDisabled && !photo.lg && photo.full === null) {
@@ -89,8 +85,58 @@ async function downloadCurrent() {
 // Worker que monta o ZIP server-side (streaming direto do R2).
 const ZIP_WORKER = 'https://lrp-gallery-signed.lrp-gallery.workers.dev/zip';
 
-// Tenta o ZIP server-side: pega o manifesto assinado no Supabase e faz
-// o Worker montar/entregar o arquivo. Retorna true se conseguiu.
+// Tenta o ZIP server-side: pega o manifesto assinado no Supabase, pergunta ao
+// Worker como dividir o álbum e baixa parte por parte. Retorna true se conseguiu.
+//
+// Por que em partes: o ZIP clássico (único que o Utilitário de Compactação do
+// macOS abre) não passa de 4GB, e cada invocação do Worker tem teto de
+// subrequests. O álbum pode ter QUALQUER tamanho — quem se divide é o arquivo,
+// não a entrega. Álbuns pequenos continuam saindo em um arquivo só.
+// Baixa um manifesto assinado em partes. Usado pelo download normal E pelo
+// download de fotos compradas — os dois batem no mesmo /zip, que tem teto de
+// 700 arquivos por requisição. Sem passar por aqui, álbum grande dá 413.
+window.zipEmPartes = async function (data, filename) {
+    // 1. Plano de divisão
+    let parts = [{ from: 0, to: data.keys.length }];
+    try {
+      const pr = await fetch(ZIP_WORKER + '-plan', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keys: data.keys, exp: data.exp, sig: data.sig })
+      });
+      if (pr.ok) {
+        const plan = await pr.json();
+        if (Array.isArray(plan.parts) && plan.parts.length) parts = plan.parts;
+      }
+    } catch (e) { /* sem plano: tenta em um arquivo só */ }
+
+    const n = parts.length;
+    if (n > 1) {
+      const gb = (parts.reduce((a, p) => a + (p.bytes || 0), 0) / 1073741824).toFixed(1);
+      toast(`${data.keys.length} fotos (${gb}GB) — o download vem em ${n} arquivos. Aguarde cada um.`);
+    } else {
+      toast(`Preparando ${data.keys.length} foto(s)...`);
+    }
+
+    const base = filename.replace(/\.zip$/i, '');
+    for (let i = 0; i < n; i++) {
+      const { from, to } = parts[i];
+      if (n > 1) toast(`Baixando parte ${i + 1} de ${n}...`);
+      const resp = await fetch(`${ZIP_WORKER}?from=${from}&to=${to}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!resp.ok) {
+        if (i === 0) return false;
+        toast(`Falhou na parte ${i + 1}. As anteriores foram salvas — tente de novo.`);
+        return true;
+      }
+      saveAs(await resp.blob(), n > 1 ? `${base} (parte ${i + 1} de ${n}).zip` : `${base}.zip`);
+      if (i < n - 1) await new Promise(r => setTimeout(r, 1500));
+    }
+    if (n > 1) toast(`Pronto — ${n} arquivos salvos.`);
+    return true;
+};
+
 async function serverZip(ids, filename) {
   if (!_usingRpc || !_galleryToken) return false;
   try {
@@ -99,15 +145,7 @@ async function serverZip(ids, filename) {
     });
     if (error || !data || data.error || !Array.isArray(data.keys) || !data.keys.length || !data.sig)
       return false;
-    toast(`Preparando ${data.keys.length} foto(s)...`);
-    const resp = await fetch(ZIP_WORKER, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (!resp.ok) return false;
-    const blob = await resp.blob();
-    saveAs(blob, filename);
-    return true;
+    return await window.zipEmPartes(data, filename);
   } catch (e) { return false; }
 }
 
@@ -147,7 +185,7 @@ async function downloadFavorites() {
 async function downloadCurrentGroup() {
   const g = (typeof currentGroup !== 'undefined') ? currentGroup : null;
   if (!g) { toast('Abra uma aba de grupo primeiro (ou use "Salvar todas")'); return; }
-  const inGroup = PHOTOS.filter(p => p.group === g);
+  const inGroup = PHOTOS.filter(p => (p.groups || []).includes(g));
   if (!inGroup.length) { toast('Nenhuma foto neste grupo'); return; }
   inGroup.forEach(p => trackEvent && trackEvent('save', p.id));
   const safe = String(g).replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim() || 'grupo';

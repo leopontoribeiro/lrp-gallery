@@ -14,7 +14,12 @@
 // Binding R2:  PHOTOS  (definido no wrangler.toml)
 // ============================================================
 
-import { makeZip } from 'client-zip';
+// client-zip@nozip64 (1.x) de propósito: a versão 2.x gera SEMPRE arquivos
+// ZIP64 marcados como "requer versão 4.5", e o Utilitário de Compactação do
+// macOS recusa esses arquivos ("tipo de arquivo inadequado"). A 1.x gera ZIP
+// clássico (versão 2.0), que o Finder abre. Custo: o ZIP não pode passar de
+// 4GB — por isso a verificação de tamanho em handleZip.
+import { downloadZip } from 'client-zip';
 import { PhotonImage, resize, watermark as photonWatermark, SamplingFilter } from '@cf-wasm/photon';
 
 // Origens que podem falar com o Worker via browser (fetch/XHR e canvas com
@@ -48,6 +53,12 @@ export default {
     // POST /zip  body: { keys[], names[], exp, sig }  (manifesto assinado
     // pelo Supabase). Monta o ZIP em streaming lendo do R2. Sem baixar
     // tudo pro navegador; escala pra 1500+ fotos.
+    // Planejamento do download: divide o pedido em partes que cabem no ZIP
+    // clássico (4GB) e no teto de subrequests do Worker. Devolve os intervalos
+    // que o site deve pedir. Sem isso, álbum grande = arquivo corrompido.
+    if (req.method === 'POST' && url.pathname === '/zip-plan') {
+      return handleZipPlan(req, env, CORS);
+    }
     if (req.method === 'POST' && url.pathname === '/zip') {
       if (env.ZIP_RL) {
         const { success } = await env.ZIP_RL.limit({ key: ip });
@@ -83,6 +94,16 @@ export default {
         if (!success) return new Response('rate limited', { status: 429, headers: { ...CORS, 'Retry-After': '60' } });
       }
       return handleStorageCheckout(req, env, url, CORS);
+    }
+    // ── Paywall: cliente perdeu o codigo -> reenvio por e-mail ──
+    // Resposta SEMPRE generica: nao confirmamos se aquele e-mail comprou ou
+    // nao (senao vira ferramenta de sondagem de quem esteve no evento).
+    if (req.method === 'POST' && url.pathname === '/recover') {
+      if (env.CHECKOUT_RL) {
+        const { success } = await env.CHECKOUT_RL.limit({ key: ip });
+        if (!success) return new Response('rate limited', { status: 429, headers: { ...CORS, 'Retry-After': '60' } });
+      }
+      return handleRecover(req, env, CORS);
     }
     // ── Paywall: webhook do Mercado Pago (confirma pagamento) ──
     if (url.pathname === '/mp-webhook') {
@@ -168,11 +189,19 @@ export default {
         if (hit) return req.method === 'HEAD' ? new Response(null, { headers: hit.headers }) : hit;
         const obj = await env.PHOTOS.get(key);
         if (!obj) return new Response('not found', { status: 404, headers: CORS });
+        const src = new Uint8Array(await obj.arrayBuffer());
         let out;
-        try { out = await makeOgJpeg(new Uint8Array(await obj.arrayBuffer())); }
-        catch (e) { return new Response('og error: ' + e.message, { status: 500, headers: CORS }); }
+        // O photon decodifica pra RGBA cru: um JPEG de 24MP vira ~96MB e
+        // estoura o limite de 128MB do isolate ("unreachable" do WASM).
+        // Se acontecer, devolvemos o arquivo original em vez de 500 — o
+        // preview pode não renderizar, mas nada quebra.
+        try { out = await makeOgJpeg(src); }
+        catch (e) { out = src; }
         const headers = new Headers(CORS);
-        headers.set('Content-Type', 'image/jpeg');
+        headers.set('Content-Type', out === src
+          ? (obj.httpMetadata?.contentType || 'image/jpeg')
+          : 'image/jpeg');
+        headers.set('x-og-resized', out === src ? 'no' : 'yes');
         headers.set('Cache-Control', 'public, max-age=604800, immutable');
         const resp = new Response(out, { headers });
         ctx.waitUntil(cache.put(cacheKey, resp.clone()));
@@ -241,6 +270,7 @@ export default {
     ctx.waitUntil(cleanupPendingOrders(env));
     ctx.waitUntil(retentionCleanup(env));
     ctx.waitUntil(backupDatabase(env));
+    ctx.waitUntil(healthcheck(env));
   },
 };
 
@@ -269,23 +299,144 @@ async function replicate(env, after = '', n = 100) {
 
 // Reconciliação agendada: retoma do cursor salvo em BACKUP (_state/replica_after),
 // processa um lote e regrava o cursor. Ao terminar a varredura, recomeça do zero.
-async function reconcile(env, n = 200) {
+// n = 200 varria 200 objetos/dia: numa base de dezenas de milhares de fotos,
+// um ciclo completo levava mais de um ano — ou seja, a rede de segurança não
+// protegia nada. 2000 por noite fecha um ciclo em semanas e cabe folgado no
+// tempo do cron, porque o caso comum é HEAD + skip (o dual-write já copiou).
+async function reconcile(env, n = 2000) {
   if (!env.BACKUP) return;
   const stObj = await env.BACKUP.get('_state/replica_after');
-  const after = stObj ? await stObj.text() : '';
-  const r = await replicate(env, after, n);
-  const next = r.done ? '' : r.last; // done -> recomeça a varredura no próximo cron
-  await env.BACKUP.put('_state/replica_after', next);
-  // registra keys puladas (falha na cópia) para uma 2ª passada manual
-  if (r.failedKeys && r.failedKeys.length) {
+  let after = stObj ? await stObj.text() : '';
+  const PAGE = 500;                 // o list() do R2 limita a 1000 por chamada
+  const t0 = Date.now();
+  const BUDGET_MS = 20000;          // folga dentro do tempo do cron
+  let done = false, scanned = 0;
+  const failedAll = [];
+
+  while (scanned < n && Date.now() - t0 < BUDGET_MS) {
+    const r = await replicate(env, after, PAGE);
+    if (r.error) break;
+    scanned += r.scanned;
+    after = r.last;
+    if (r.failedKeys && r.failedKeys.length) failedAll.push(...r.failedKeys);
+    if (r.done) { done = true; break; }
+  }
+
+  // Terminou a varredura → recomeça do zero no próximo cron.
+  await env.BACKUP.put('_state/replica_after', done ? '' : after);
+
+  // Keys que falharam ficam registradas para uma 2ª passada manual.
+  if (failedAll.length) {
     let prev = [];
     try { const o = await env.BACKUP.get('_state/failed.json'); if (o) prev = JSON.parse(await o.text()); } catch (e) {}
-    const merged = [...new Set([...prev, ...r.failedKeys])].slice(-500);
+    const merged = [...new Set([...prev, ...failedAll])].slice(-500);
     await env.BACKUP.put('_state/failed.json', JSON.stringify(merged));
+  }
+
+  // Registro da última execução — sem isto você não sabe se o cron rodou.
+  await env.BACKUP.put('_state/last_reconcile.json', JSON.stringify({
+    at: new Date().toISOString(), scanned, done, falhas: failedAll.length,
+    ms: Date.now() - t0,
+  }));
+}
+
+// Autoverificação diária do link do cliente. Existe porque o preview do
+// WhatsApp ficou quebrado por meses sem ninguém perceber: nada no sistema
+// olhava a página do jeito que um robô externo olha.
+// Resultado em BACKUP/_state/healthcheck.json — se 'ok' for false, algo
+// que o cliente vê está quebrado.
+async function healthcheck(env) {
+  if (!env.BACKUP || !env.HEALTHCHECK_URL) return;
+  const out = { at: new Date().toISOString(), ok: false, etapas: {} };
+  try {
+    // 1. A página responde para um robô de preview?
+    const r = await fetch(env.HEALTHCHECK_URL, {
+      headers: { 'User-Agent': 'facebookexternalhit/1.1' },
+      cf: { cacheTtl: 0 },
+    });
+    out.etapas.pagina = r.status;
+    const html = await r.text();
+
+    // 2. O middleware preencheu as meta tags?
+    out.etapas.x_og = r.headers.get('x-og');
+    const m = html.match(/<meta property="og:image"[^>]*content="([^"]+)"/i);
+    out.etapas.og_image = !!m;
+    if (!m) { await save(env, out); return; }
+
+    // 3. A capa abre e cabe no limite do robô?
+    const img = await fetch(m[1]);
+    const bytes = (await img.arrayBuffer()).byteLength;
+    out.etapas.capa_status = img.status;
+    out.etapas.capa_kb = Math.round(bytes / 1024);
+
+    out.ok = r.status === 200 && img.status === 200 && bytes < 600 * 1024;
+  } catch (e) {
+    out.erro = String(e && e.message);
+  }
+  await save(env, out);
+
+  async function save(env, o) {
+    await env.BACKUP.put('_state/healthcheck.json', JSON.stringify(o, null, 2));
   }
 }
 
 // ── ZIP: valida o manifesto e faz streaming do ZIP a partir do R2 ──
+// ── Limites de uma PARTE do download ────────────────────────
+// 3,5GB: folga sob o teto de 4GB do ZIP clássico (o único formato que o
+//        Utilitário de Compactação do macOS abre sem reclamar).
+// 700 arquivos: folga sob o teto de ~1000 subrequests por invocação do Worker.
+// O álbum inteiro pode ter qualquer tamanho — ele é entregue em N partes.
+const ZIP_MAX_BYTES = 3.5 * 1024 * 1024 * 1024;
+const ZIP_MAX_FILES = 700;
+
+// Lê o manifesto assinado e devolve como o álbum deve ser dividido.
+// Resposta: { parts: [{ from, to, count, bytes }], total_bytes, total_files }
+async function handleZipPlan(req, env, CORS) {
+  const J = (o, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { ...CORS, 'Content-Type': 'application/json' } });
+  if (!env.SIGNING_SECRET) return J({ error: 'signing disabled' }, 403);
+  let m;
+  try { m = await req.json(); } catch { return J({ error: 'bad json' }, 400); }
+  const { keys, exp, sig } = m || {};
+  if (!Array.isArray(keys) || !keys.length || !exp || !sig) return J({ error: 'bad manifest' }, 400);
+  if (Number(exp) < Math.floor(Date.now() / 1000)) return J({ error: 'expired' }, 403);
+  if (!await validSigAny(env, keys.join('\n'), exp, sig)) return J({ error: 'bad signature' }, 403);
+  if (keys.some(k => typeof k !== 'string' || !k.startsWith('galleries/'))) return J({ error: 'bad keys' }, 403);
+
+  // Tamanhos vêm de list() por prefixo (1 subrequest por 1000 objetos),
+  // muito mais barato que um head() por foto.
+  const sizes = new Map();
+  const prefixes = new Set(keys.map(k => k.slice(0, k.lastIndexOf('/') + 1)));
+  for (const prefix of prefixes) {
+    let cursor;
+    do {
+      const r = await env.PHOTOS.list({ prefix, limit: 1000, cursor });
+      for (const o of r.objects) sizes.set(o.key, o.size);
+      cursor = r.truncated ? r.cursor : undefined;
+    } while (cursor);
+  }
+
+  // Média das fotos conhecidas cobre eventuais keys não listadas.
+  const conhecidos = keys.filter(k => sizes.has(k));
+  const media = conhecidos.length
+    ? conhecidos.reduce((a, k) => a + sizes.get(k), 0) / conhecidos.length
+    : 5 * 1024 * 1024;
+
+  const parts = [];
+  let from = 0, bytes = 0, count = 0, total = 0;
+  for (let i = 0; i < keys.length; i++) {
+    const sz = sizes.has(keys[i]) ? sizes.get(keys[i]) : media;
+    // Fecha a parte ANTES de estourar qualquer um dos dois limites.
+    if (count > 0 && (bytes + sz > ZIP_MAX_BYTES || count >= ZIP_MAX_FILES)) {
+      parts.push({ from, to: i, count, bytes: Math.round(bytes) });
+      from = i; bytes = 0; count = 0;
+    }
+    bytes += sz; count++; total += sz;
+  }
+  if (count > 0) parts.push({ from, to: keys.length, count, bytes: Math.round(bytes) });
+
+  return J({ parts, total_files: keys.length, total_bytes: Math.round(total) });
+}
+
 async function handleZip(req, env, CORS) {
   if (!env.SIGNING_SECRET) return new Response('signing disabled', { status: 403, headers: CORS });
   let m;
@@ -293,10 +444,6 @@ async function handleZip(req, env, CORS) {
   const { keys, names, exp, sig } = m || {};
   if (!Array.isArray(keys) || !keys.length || !exp || !sig)
     return new Response('bad manifest', { status: 400, headers: CORS });
-  // Teto de subrequests do Worker (~1000): acima disso o ZIP falharia no meio.
-  // O cliente deve fatiar em partes de <=900. Falha explícita > corrupção silenciosa.
-  if (keys.length > 900)
-    return new Response(JSON.stringify({ error: 'too_many_photos', max: 900, got: keys.length }), { status: 413, headers: { ...CORS, 'Content-Type': 'application/json' } });
   if (Number(exp) < Math.floor(Date.now() / 1000))
     return new Response('expired', { status: 403, headers: CORS });
   // assinatura sobre keys.join('\n') + ':' + exp  (igual ao pgcrypto)
@@ -308,9 +455,17 @@ async function handleZip(req, env, CORS) {
 
   // Gera as entradas sob demanda: cada objeto é lido do R2 quando o
   // client-zip pede — mantém o uso de memória baixo mesmo com 1500 fotos.
+  // Recorte: o site pede o álbum em partes (?from=&to=). A assinatura continua
+  // valendo sobre a lista COMPLETA de keys — fatiar não exige assinar de novo.
+  const u = new URL(req.url);
+  const from = Math.max(0, Number(u.searchParams.get('from')) || 0);
+  const to = Math.min(keys.length, Number(u.searchParams.get('to')) || keys.length);
+  if (to - from > ZIP_MAX_FILES)
+    return new Response(JSON.stringify({ error: 'part_too_big', max: ZIP_MAX_FILES }), { status: 413, headers: { ...CORS, 'Content-Type': 'application/json' } });
+
   const files = (async function* () {
     const seen = {};
-    for (let i = 0; i < keys.length; i++) {
+    for (let i = from; i < to; i++) {
       const obj = await env.PHOTOS.get(keys[i]);
       if (!obj) continue;
       let name = (names && names[i]) || keys[i].split('/').pop();
@@ -322,7 +477,7 @@ async function handleZip(req, env, CORS) {
     }
   })();
 
-  const zip = makeZip(files);
+  const zip = downloadZip(files).body;
   const headers = new Headers(CORS);
   headers.set('Content-Type', 'application/zip');
   headers.set('Content-Disposition', 'attachment; filename="galeria.zip"');
@@ -345,6 +500,38 @@ function json503(CORS) { return new Response(JSON.stringify({ error: 'paywall n�
 // o motivo. Antes engolia tudo calado: chave errada ou domínio não verificado
 // no Resend passavam despercebidos e a venda ficava sem aviso nenhum.
 // Para ver: npx wrangler tail --format pretty
+// Reenvia por e-mail os codigos de desbloqueio ja comprados. O codigo nunca
+// volta na resposta HTTP — so pelo e-mail do comprador.
+async function handleRecover(req, env, CORS) {
+  const generic = () => new Response(
+    JSON.stringify({ ok: true, message: 'Se houver compra com esse e-mail, enviamos o acesso.' }),
+    { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
+
+  let body;
+  try { body = await req.json(); } catch { return generic(); }
+  const token = String(body.token || '');
+  const email = String(body.email || '').trim();
+  if (!token || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return generic();
+  if (!env.WORKER_SECRET || !env.SUPABASE_URL) return generic();
+
+  const res = await sbRpc(env, 'get_unlock_codes_for_email', {
+    p_secret: env.WORKER_SECRET, p_token: token, p_email: email,
+  });
+  const codes = (res && Array.isArray(res.codes)) ? res.codes : [];
+  if (!codes.length) return generic();
+
+  const origin = req.headers.get('Origin') || '';
+  const link = origin ? `${origin}/gallery/gallery.html?t=${encodeURIComponent(token)}` : '';
+  const lista = codes.map(c => `<li><b>${c}</b></li>`).join('');
+  await sendEmail(env, email,
+    'Seu acesso as fotos — @eusouleandroribeiro',
+    `<p>Voce pediu para recuperar o acesso as fotos de <b>${res.gallery_name || 'sua galeria'}</b>.</p>`
+    + `<p>Codigo(s) de desbloqueio:</p><ul>${lista}</ul>`
+    + (link ? `<p><a href="${link}">Abrir a galeria</a> e usar a opcao "Ja comprei" para colar o codigo.</p>` : '')
+    + '<p>Guarde este e-mail: ele funciona em qualquer aparelho.</p>');
+  return generic();
+}
+
 async function sendEmail(env, to, subject, html) {
   if (!env.RESEND_API_KEY || !env.RESEND_FROM) {
     console.log('sendEmail: Resend não configurado (RESEND_API_KEY/RESEND_FROM) — e-mail não enviado para', to);
@@ -587,14 +774,31 @@ async function validSig(secret, key, exp, sig, suffix = '') {
 // rodar o watermark de novo. Não substitui o cache de borda (que cobre
 // requisições entre isolates/colos) — reduz o pico de CPU no instante em que
 // várias pessoas abrem o mesmo link ainda "frio".
+// Acima disto a decodificação estoura o isolate (ver guarda no GET ?wm=1).
+const WM_MAX_BYTES = 8 * 1024 * 1024;
 const _inflightWm = new Map();
 async function computeWatermarked(env, ctx, cache, cacheKey, key, CORS) {
   const k = cacheKey.url;
   let p = _inflightWm.get(k);
   if (!p) {
     p = (async () => {
-      const obj = await env.PHOTOS.get(key);
-      if (!obj) return new Response('not found', { status: 404, headers: CORS });
+      // Fonte preferida: o derivado de 1600px gravado no upload. Aplicar a
+      // marca sobre o ORIGINAL estourava a memória do isolate (um JPEG de
+      // 24MP vira ~96MB descompactado, acima do limite de 128MB) e o pedido
+      // morria com "unreachable". Com o derivado, o pico fica em ~10MB.
+      let obj = await env.PHOTOS.get(key + '_lg.jpg');
+      if (!obj) {
+        // Fotos enviadas antes desta mudança não têm o derivado. Segue pelo
+        // original, mas só até o tamanho que a memória aguenta — e NUNCA
+        // devolve o arquivo sem marca, que vazaria a foto limpa.
+        obj = await env.PHOTOS.get(key);
+        if (!obj) return new Response('not found', { status: 404, headers: CORS });
+        if (obj.size > WM_MAX_BYTES) {
+          return new Response('watermark: foto antiga e grande demais (' +
+            Math.round(obj.size / 1048576) + 'MB). Reenvie a foto para gerar o derivado.',
+            { status: 413, headers: CORS });
+        }
+      }
       let out;
       try { out = await applyWatermark(env, new Uint8Array(await obj.arrayBuffer())); }
       catch (e) { return new Response('watermark error: ' + e.message, { status: 500, headers: CORS }); }
@@ -640,7 +844,7 @@ async function applyWatermark(env, imgBytes) {
   let base = PhotonImage.new_from_byteslice(imgBytes);
   let bw = base.get_width(), bh = base.get_height();
   // Limita a dimensão do preview marcado (memória do isolate ~128MB + banda).
-  const MAX = 2000;
+  const MAX = 1600;
   if (bw > MAX || bh > MAX) {
     const sc = Math.min(MAX / bw, MAX / bh);
     const nw = Math.max(1, Math.round(bw * sc)), nh = Math.max(1, Math.round(bh * sc));

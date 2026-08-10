@@ -10,6 +10,8 @@ function updatePaywallUI() {
   if (buy) { buy.style.display = _paywall ? 'block' : 'none'; buy.textContent = `Comprar originais (favoritas · ${brl(galleryPrice)}/foto)`; }
   if (dl)   dl.style.display = _purchased.size ? 'block' : 'none';
   if (code) code.style.display = _paywall ? 'block' : 'none';
+  const rec = document.getElementById('drawer-recover');
+  if (rec) rec.style.display = _paywall ? 'block' : 'none';
   if (facial) facial.style.display = facialRecognitionEnabled ? 'block' : 'none';
 }
 async function buyFavorites() {
@@ -51,12 +53,12 @@ async function refreshPurchases() {
 async function downloadPurchased() {
   if (!_purchased.size) { toast('Você ainda não comprou fotos deste álbum'); return; }
   try {
-    const { data, error } = await sb.rpc('get_paid_zip_manifest', { p_token: _galleryToken, p_visitor: getVisitorId(), p_codes: loadCodes() });
+    const { data, error } = await sb.rpc('get_paid_zip_manifest', { p_token: _galleryToken, p_visitor: getVisitorId(), p_codes: loadCodes(), p_pw: window._pwHash || null });
     if (error || !data || data.error || !data.sig) { toast('Nada para baixar ainda.'); return; }
-    toast(`Preparando ${data.keys.length} original(is)...`);
-    const resp = await fetch(ZIP_WORKER, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    if (!resp.ok) { toast('Falha no download.'); return; }
-    saveAs(await resp.blob(), 'originais-comprados.zip');
+    // Mesma rotina de partes do download normal: o /zip aceita no máximo 700
+    // arquivos por requisição, então compra grande precisa ser fatiada igual.
+    const ok = await window.zipEmPartes(data, 'originais-comprados.zip');
+    if (!ok) { toast('Falha no download.'); return; }
   } catch (e) { toast('Falha no download.'); reportError('paid-zip', e.message); }
 }
 async function enterUnlockCode() {
@@ -87,3 +89,30 @@ function handlePaidReturn(params) {
     if (tries >= 8) { clearInterval(iv); await refreshPurchases(); }
   }, 3000);
 }
+
+// ── Recuperar compra por e-mail ─────────────────────────────
+// O código vivia só no localStorage: limpar o navegador, trocar de aparelho
+// ou comprar em aba anônima fazia o cliente perder o que pagou. Aqui ele
+// pede o reenvio informando o e-mail usado no pagamento; o código volta por
+// e-mail (nunca na tela, para ninguém sondar quem comprou).
+const RECOVER_URL = 'https://lrp-gallery-signed.lrp-gallery.workers.dev/recover';
+
+async function recuperarCompra() {
+  const email = prompt('Digite o e-mail usado no pagamento.\n\nSe houver compra, enviamos o código de desbloqueio para ele.');
+  if (!email) return;
+  try {
+    const r = await fetch(RECOVER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: _galleryToken, email }),
+    });
+    const d = await r.json().catch(() => ({}));
+    const msg = d.message || 'Se houver compra com esse e-mail, enviamos o acesso.';
+    if (typeof toast === 'function') toast(msg); else alert(msg);
+  } catch (e) {
+    const msg = 'Não consegui enviar agora. Tente de novo em alguns minutos.';
+    if (typeof toast === 'function') toast(msg); else alert(msg);
+    if (typeof reportError === 'function') reportError('recover', e.message);
+  }
+}
+window.recuperarCompra = recuperarCompra;

@@ -2,7 +2,7 @@
 // Extraído de admin.html (fatia de modularização). Depende de globals do
 // script principal (sb, toast, signPhotos, BASE_URL, currentGalleryId,
 // currentGalleryCoverPhotoId, coverEditorPhotoId, coverEditorPosX,
-// coverEditorPosY, galleries, BUCKET, goTo, hashSHA256, loadFaceIndexInfo) —
+// coverEditorPosY, galleries, goTo, hashSHA256, loadFaceIndexInfo) —
 // só usados dentro das funções.
 
 // Busca todas as fotos paginando (contorna o teto de 1000 do PostgREST — funciona com 1500+)
@@ -31,17 +31,25 @@ async function openDetail(id) {
   catch(e) { toast('Erro ao carregar fotos: ' + e.message, 'error'); return; }
 
   currentGalleryId = id;
+  currentGalleryGroupId = g.gallery_group_id || null;
   const link = `${BASE_URL}/gallery.html?t=${g.access_token}`;
 
   document.getElementById('detail-title').textContent = g.name.toUpperCase();
   document.getElementById('detail-meta').textContent = `${g.date||'—'} · ${g.location||'—'} · ${new Date(g.created_at).toLocaleDateString('pt-BR')}`;
   document.getElementById('detail-link').textContent = link;
   g._link = link;
+  renderResLinks(g);
+  renderDetailPassword(g);
 
   g.photos?.sort((a,b) => a.position - b.position);
   renderDetailPhotos(g);
   goTo('detail');
   document.getElementById('topbar-title').textContent = g.name.toUpperCase();
+
+  // O escaneamento de rostos é sob demanda (botão "Escanear rostos") —
+  // aqui só atualizamos o rótulo com quantas fotos ainda faltam.
+  if (typeof refreshDetailFacesBtn === 'function') refreshDetailFacesBtn(id);
+  if (typeof loadGalleryVideos === 'function') loadGalleryVideos(id);
 }
 
 function makeDetailPhotoEl(photo) {
@@ -52,8 +60,8 @@ function makeDetailPhotoEl(photo) {
   div.dataset.id = photo.id;
   div.innerHTML = `
     <img src="${photo.thumb_url}" alt="${esc(photo.filename)}" loading="lazy">
-    ${photo.group_name ? `<span class="detail-photo-group">${esc(photo.group_name)}</span>` : ''}
-    <button class="detail-photo-cover" onclick="openCoverEditor('${photo.id}','${photo.full_url}',event)" title="${isCover ? 'Capa atual — clique para reposicionar' : 'Definir como capa'}">
+    ${photo.group_name ? `<span class="detail-photo-group">${esc(parseTags(photo.group_name).join(' · '))}</span>` : ''}
+    <button class="detail-photo-cover" data-full="${esc(photo.full_url)}" onclick="openCoverEditor('${photo.id}', this.dataset.full, event)" title="${isCover ? 'Capa atual — clique para reposicionar' : 'Definir como capa'}">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
     </button>
     <button class="detail-photo-del" onclick="deletePhoto('${photo.id}','${photo.storage_path}')" title="Remover">
@@ -63,9 +71,19 @@ function makeDetailPhotoEl(photo) {
   div.addEventListener('click', (e) => {
     if (!groupMode) return;
     e.stopPropagation();
+    e.preventDefault();
     const key = String(photo.id);
-    if (groupSelection.has(key)) groupSelection.delete(key);
-    else groupSelection.add(key);
+    const idx = _detailPhotoIds.indexOf(key);
+    // Shift+clique: seleciona (marca) todo o intervalo entre a última foto
+    // clicada e esta — igual ao Finder/Explorer.
+    if (e.shiftKey && _lastSelIndex >= 0 && idx >= 0) {
+      const [a, b] = _lastSelIndex < idx ? [_lastSelIndex, idx] : [idx, _lastSelIndex];
+      for (let i = a; i <= b; i++) groupSelection.add(_detailPhotoIds[i]);
+    } else {
+      if (groupSelection.has(key)) groupSelection.delete(key);
+      else groupSelection.add(key);
+      _lastSelIndex = idx;
+    }
     updateGroupBar();
   }, true); // captura antes dos botões internos no modo grupos
   return div;
@@ -77,6 +95,7 @@ function renderDetailPhotos(g) {
   const count = document.getElementById('detail-photo-count');
   const photos = g.photos || [];
   count.textContent = `${photos.length} fotos`;
+  _detailPhotoIds = photos.map(p => String(p.id)); // ordem p/ Shift-range
   grid.innerHTML = '';
   currentGalleryCoverPhotoId = g.cover_photo_id || null;
 
@@ -95,41 +114,61 @@ function renderDetailPhotos(g) {
   };
   step();
 
-  // Sugestões de grupos existentes no datalist
-  const names = [...new Set(photos.map(p => p.group_name).filter(Boolean))];
+  // Sugestões de grupos existentes no datalist (uma foto pode ter várias etiquetas)
+  const names = [...new Set(photos.flatMap(p => parseTags(p.group_name)))];
   document.getElementById('group-names').innerHTML = names.map(n => `<option value="${esc(n)}">`).join('');
 }
 
 // ── GRUPOS (admin) ──
 let groupMode = false;
 const groupSelection = new Set();
+let _detailPhotoIds = [];   // ordem atual das fotos (p/ seleção por Shift)
+let _lastSelIndex = -1;     // índice da última foto clicada (âncora do Shift)
 
 function toggleGroupMode() {
   groupMode = !groupMode;
   groupSelection.clear();
+  _lastSelIndex = -1;
   document.getElementById('group-bar').style.display = groupMode ? 'flex' : 'none';
   document.getElementById('btnGroupMode').classList.toggle('btn-primary', groupMode);
   updateGroupBar();
   if (!groupMode) openDetail(currentGalleryId);
-  else toast('Clique nas fotos para selecionar, depois dê um nome ao grupo', '');
+  else toast('Clique para selecionar · Shift+clique marca o intervalo', '');
+}
+
+// Selecionar todas / limpar (botão da barra de grupos)
+function toggleSelectAllPhotos() {
+  if (groupSelection.size === _detailPhotoIds.length) groupSelection.clear();
+  else _detailPhotoIds.forEach(id => groupSelection.add(id));
+  _lastSelIndex = -1;
+  updateGroupBar();
 }
 
 function updateGroupBar() {
   document.getElementById('group-sel-count').textContent = `${groupSelection.size} SELECIONADAS`;
+  const btnAll = document.getElementById('group-select-all');
+  if (btnAll) btnAll.textContent = (groupSelection.size === _detailPhotoIds.length && _detailPhotoIds.length)
+    ? 'Limpar seleção' : 'Selecionar todas';
   document.querySelectorAll('.detail-photo').forEach(d =>
     d.classList.toggle('selected', groupSelection.has(d.dataset.id)));
 }
 
+// Uma foto pode ter várias etiquetas (parseTags/joinTags, gallery-utils.js) —
+// "Aplicar" ADICIONA a etiqueta à lista da foto (não apaga as outras que já
+// tinha); "Remover" tira só essa etiqueta específica, mantendo o resto.
 async function applyGroup(remove = false) {
   if (!groupSelection.size) { toast('Selecione fotos primeiro', 'error'); return; }
   const name = document.getElementById('group-name-input').value.trim();
-  if (!remove && !name) { toast('Digite o nome do grupo', 'error'); return; }
+  if (!name) { toast('Digite o nome do grupo', 'error'); return; }
   const ids = [...groupSelection];
-  const { error } = await sb.from('photos')
-    .update({ group_name: remove ? null : name })
-    .in('id', ids);
-  if (error) { toast('Erro: ' + error.message, 'error'); return; }
-  toast(remove ? `Grupo removido de ${ids.length} foto(s)` : `${ids.length} foto(s) → "${name}"`, 'success');
+  const { data: rows, error: selErr } = await sb.from('photos').select('id,group_name').in('id', ids);
+  if (selErr) { toast('Erro: ' + selErr.message, 'error'); return; }
+  for (const r of rows) {
+    const tags = parseTags(r.group_name);
+    const next = remove ? tags.filter(t => t !== name) : (tags.includes(name) ? tags : [...tags, name]);
+    await sb.from('photos').update({ group_name: joinTags(next) || null }).eq('id', r.id);
+  }
+  toast(remove ? `Etiqueta "${name}" removida de ${ids.length} foto(s)` : `"${name}" adicionada a ${ids.length} foto(s)`, 'success');
   groupSelection.clear();
   // Recarrega mantendo o modo grupos ativo
   const { data: g } = await sb.from('galleries').select('*').eq('id', currentGalleryId).single();
@@ -141,44 +180,250 @@ async function applyGroup(remove = false) {
   updateGroupBar();
 }
 
+// Renomeia o grupo (etiqueta) em TODAS as fotos que o têm — não precisa selecionar.
+// Usa o nome digitado/escolhido no campo de grupo como o grupo a renomear.
+async function renamePhotoGroup() {
+  const oldName = document.getElementById('group-name-input').value.trim();
+  if (!oldName) { toast('Digite (ou escolha) o nome do grupo a renomear', 'error'); return; }
+  const newName = prompt(`Novo nome para o grupo "${oldName}":`, oldName);
+  if (newName == null) return;
+  const clean = newName.trim();
+  if (!clean || clean === oldName) return;
+  // group_name pode ter várias etiquetas — busca por substring (over-fetch)
+  // e confere/reescreve a lista de cada foto certinha no cliente.
+  const { data: rows, error } = await sb.from('photos').select('id,group_name')
+    .eq('gallery_id', currentGalleryId).ilike('group_name', `%${oldName}%`);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  let count = 0;
+  for (const r of (rows || [])) {
+    const tags = parseTags(r.group_name);
+    if (!tags.includes(oldName)) continue;
+    await sb.from('photos').update({ group_name: joinTags(tags.map(t => t === oldName ? clean : t)) }).eq('id', r.id);
+    count++;
+  }
+  toast(`Grupo "${oldName}" → "${clean}" (${count} foto(s))`, 'success');
+  document.getElementById('group-name-input').value = '';
+  openDetail(currentGalleryId);
+}
+
+// ── Ações em lote (modo grupos): apagar e renomear ──
+async function deleteSelectedPhotos() {
+  if (!groupSelection.size) { toast('Selecione fotos primeiro', 'error'); return; }
+  const ids = [...groupSelection];
+  const ok = await showConfirmModal(`Apagar ${ids.length} foto(s) selecionada(s)? Essa ação não pode ser desfeita.`);
+  if (!ok) return;
+
+  const { data: rows } = await sb.from('photos').select('id,storage_path').in('id', ids);
+  for (const r of (rows || [])) {
+    if (r.storage_path) {
+      await _deleteR2(r.storage_path);
+      await _deleteR2(`${r.storage_path}_thumb.webp`);
+    }
+  }
+  const { error } = await sb.from('photos').delete().in('id', ids);
+  if (error) { toast('Erro ao apagar: ' + error.message, 'error'); return; }
+  logAdminAction('bulk_delete_photos', { galleryId: currentGalleryId, count: ids.length });
+  toast(`${ids.length} foto(s) apagada(s)`, 'error');
+  groupSelection.clear();
+  openDetail(currentGalleryId);
+}
+
+// Apaga fotos com filename repetido, mantendo 1 por nome. Prioridade pra
+// ficar: quem tem etiqueta de grupo; se as duplicatas empatam nisso
+// (nenhuma ou ambas com etiqueta), fica a de posição mais alta (a "segunda").
+async function removeDuplicatePhotos() {
+  if (!currentGalleryId) return;
+  const { data: gal } = await sb.from('galleries').select('cover_photo_id').eq('id', currentGalleryId).maybeSingle();
+  const { data: photos, error } = await sb.from('photos')
+    .select('id,filename,storage_path,group_name,position')
+    .eq('gallery_id', currentGalleryId).order('position', { ascending: true });
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+
+  // Map (não objeto): evita colisão com nomes tipo "constructor"/"toString".
+  // Ignora filename vazio/nulo — não dá pra saber se são "o mesmo nome" de verdade.
+  const byName = new Map();
+  (photos || []).forEach(p => {
+    if (!p.filename) return;
+    if (!byName.has(p.filename)) byName.set(p.filename, []);
+    byName.get(p.filename).push(p);
+  });
+  const toDelete = [];
+  let newCover = null;
+  for (const group of byName.values()) {
+    if (group.length < 2) continue;
+    let keep = group[0];
+    for (const cur of group.slice(1)) {
+      const curTagged = !!cur.group_name, keepTagged = !!keep.group_name;
+      if (curTagged || !keepTagged) keep = cur; // tag ganha; empate = fica o de posição maior (mais recente no loop)
+    }
+    group.forEach(p => {
+      if (p.id === keep.id) return;
+      toDelete.push(p);
+      if (gal && gal.cover_photo_id === p.id) newCover = keep.id; // capa era uma duplicata apagada
+    });
+  }
+  if (!toDelete.length) { toast('Nenhuma foto duplicada encontrada', ''); return; }
+
+  const ok = await showConfirmModal(`${toDelete.length} foto(s) duplicada(s) encontrada(s). Apagar, mantendo só 1 de cada nome?`);
+  if (!ok) return;
+
+  for (const p of toDelete) {
+    if (p.storage_path) { await _deleteR2(p.storage_path); await _deleteR2(`${p.storage_path}_thumb.webp`); }
+  }
+  const { error: delErr } = await sb.from('photos').delete().in('id', toDelete.map(p => p.id));
+  if (delErr) { toast('Erro ao apagar: ' + delErr.message, 'error'); return; }
+  if (newCover) await sb.from('galleries').update({ cover_photo_id: newCover }).eq('id', currentGalleryId);
+  logAdminAction('remove_duplicate_photos', { galleryId: currentGalleryId, count: toDelete.length });
+  toast(`${toDelete.length} duplicada(s) apagada(s)`, 'success');
+  openDetail(currentGalleryId);
+}
+
+// Renomeia em sequência (ordem de posição), preservando a extensão original de cada arquivo.
+async function _renamePhotoRows(rows, base) {
+  if (!rows.length) return 0;
+  const pad = Math.max(3, String(rows.length).length);
+  let n = 1, ok = 0;
+  for (const r of rows) {
+    const ext = (r.filename.match(/\.[a-zA-Z0-9]+$/) || [''])[0];
+    const newName = `${base} ${String(n).padStart(pad, '0')}${ext}`;
+    const { error } = await sb.from('photos').update({ filename: newName }).eq('id', r.id);
+    if (!error) ok++;
+    n++;
+  }
+  return ok;
+}
+
+async function renameSelectedPhotos() {
+  if (!groupSelection.size) { toast('Selecione fotos primeiro', 'error'); return; }
+  const base = prompt(`Novo nome-base para as ${groupSelection.size} foto(s) selecionada(s) (ex: "Cerimônia"):`, '');
+  if (base == null) return;
+  const clean = base.trim();
+  if (!clean) { toast('Nome vazio', 'error'); return; }
+
+  const { data: rows } = await sb.from('photos').select('id,filename,position')
+    .in('id', [...groupSelection]).order('position', { ascending: true });
+  const ok = await _renamePhotoRows(rows || [], clean);
+  logAdminAction('rename_photos', { galleryId: currentGalleryId, count: ok, scope: 'selected' });
+  toast(`${ok} foto(s) renomeada(s)`, 'success');
+  groupSelection.clear();
+  openDetail(currentGalleryId);
+}
+
+async function renameAllPhotos() {
+  if (!currentGalleryId) return;
+  const base = prompt('Novo nome-base para TODAS as fotos desta galeria (ex: "Casamento"):', '');
+  if (base == null) return;
+  const clean = base.trim();
+  if (!clean) { toast('Nome vazio', 'error'); return; }
+  const ok = await showConfirmModal(`Renomear TODAS as fotos desta galeria para "${clean} 001", "${clean} 002"...?`);
+  if (!ok) return;
+
+  const { data: rows } = await sb.from('photos').select('id,filename,position')
+    .eq('gallery_id', currentGalleryId).order('position', { ascending: true });
+  const done = await _renamePhotoRows(rows || [], clean);
+  logAdminAction('rename_photos', { galleryId: currentGalleryId, count: done, scope: 'all' });
+  toast(`${done} foto(s) renomeada(s)`, 'success');
+  openDetail(currentGalleryId);
+}
+
+// Mesmo padrão de barra de progresso da tela "Nova Galeria" (.upload-item +
+// setProgress, admin-galleries.js) — reaproveitado aqui em vez de um toast
+// mudo, que não dava nenhum feedback de evolução durante o envio.
 async function addPhotosToDetail(files) {
   if(!currentGalleryId) return;
-  toast(`Enviando ${files.length} foto(s)...`, '');
+  resetDupePolicy();
+  const fileArr = Array.from(files);
+  if (!fileArr.length) return;
 
+  const list = document.getElementById('detail-upload-list');
+  list.innerHTML = '';
+  document.getElementById('detail-upload-continue')?.remove();
+  const items = fileArr.map(file => {
+    const id = Date.now() + Math.random();
+    const item = document.createElement('div');
+    item.className = 'upload-item';
+    item.id = `upload-${id}`;
+    item.innerHTML = `
+      <span class="upload-item-name">${esc(file.name)}</span>
+      <span class="upload-item-size">${(file.size/1024/1024).toFixed(1)}MB</span>
+      <div class="upload-progress-bar"><div class="upload-progress-fill" id="prog-${id}" style="width:0%"></div></div>
+      <span class="upload-status uploading" id="status-${id}">—</span>
+    `;
+    list.appendChild(item);
+    return { id, file, done: false };
+  });
+
+  await _runUploadBatch(items, list);
+}
+
+// Roda (ou retoma) um lote: pula quem já subiu (done=true) e, se o upload de
+// algum arquivo falhar (rede caiu, arquivo corrompido etc.), não derruba o
+// lote inteiro — segue pros próximos e deixa o botão "Continuar" reenviar só
+// os que faltaram. uploadGalleryPhoto já detecta nome+tamanho repetido e não
+// reenvia à toa, então retomar depois de fechar a aba também funciona.
+async function _runUploadBatch(items, list) {
   const { data: existing } = await sb.from('photos').select('position').eq('gallery_id', currentGalleryId).order('position', {ascending: false}).limit(1);
   let pos = (existing?.[0]?.position ?? -1) + 1;
 
-  for(const file of Array.from(files)) {
-    const path = `galleries/${currentGalleryId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
-    const { error } = await sb.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type });
-    if(error) continue;
-
-    const { data: u } = sb.storage.from(BUCKET).getPublicUrl(path);
-    const { data: t } = sb.storage.from(BUCKET).getPublicUrl(path, { transform: { width: 800, height: 800, resize: 'contain', quality: 80, format: 'webp' } });
-
-    // Dimensões reais — usadas pelo layout justificado da galeria
-    const dims = await new Promise(res => {
-      const url = URL.createObjectURL(file);
-      const im = new Image();
-      im.onload  = () => { URL.revokeObjectURL(url); res({ w: im.naturalWidth, h: im.naturalHeight }); };
-      im.onerror = () => { URL.revokeObjectURL(url); res({ w: null, h: null }); };
-      im.src = url;
-    });
-
-    await sb.from('photos').insert({
-      gallery_id: currentGalleryId, filename: file.name,
-      storage_path: path, thumb_url: t.publicUrl,
-      full_url: u.publicUrl, size_bytes: file.size, position: pos++,
-      width: dims.w, height: dims.h
-    });
+  let ok = 0, failed = 0;
+  for (const it of items) {
+    if (it.done) { ok++; continue; }
+    setProgress(it.id, 30);
+    let photoId = null;
+    try { photoId = await uploadGalleryPhoto(it.file, currentGalleryId, pos++); }
+    catch (e) { console.error('addPhotosToDetail:', e); }
+    setProgress(it.id, 100, !!photoId, !photoId);
+    if (photoId) { it.done = true; ok++; } else { failed++; }
   }
 
-  toast(`${files.length} foto(s) adicionada(s)!`, 'success');
+  document.getElementById('detail-upload-continue')?.remove();
+
+  if (failed > 0) {
+    toast(`${ok} de ${items.length} enviada(s) — ${failed} falharam.`, 'error');
+    const btn = document.createElement('button');
+    btn.id = 'detail-upload-continue';
+    btn.className = 'btn btn-primary';
+    btn.style.marginTop = '10px';
+    btn.textContent = `Continuar envio (${failed} restante${failed > 1 ? 's' : ''})`;
+    btn.onclick = () => { btn.remove(); _runUploadBatch(items, list); };
+    list.insertAdjacentElement('afterend', btn);
+    return;
+  }
+
+  toast(`${ok} de ${items.length} foto(s) adicionada(s)!`, 'success');
+  if (typeof refreshDetailFacesBtn === 'function') refreshDetailFacesBtn(currentGalleryId);
+  setTimeout(() => { list.innerHTML = ''; openDetail(currentGalleryId); }, 600);
+}
+
+// Envia uma foto nova e já define como capa (usa uploadGalleryPhoto, de admin-galleries.js).
+async function addCoverToDetail(file) {
+  if (!currentGalleryId || !file) return;
+  toast('Enviando capa...', '');
+  const { data: existing } = await sb.from('photos').select('position')
+    .eq('gallery_id', currentGalleryId).order('position', { ascending: false }).limit(1);
+  const pos = (existing?.[0]?.position ?? -1) + 1;
+
+  const photoId = await uploadGalleryPhoto(file, currentGalleryId, pos);
+  if (!photoId) { toast('Erro ao enviar a capa', 'error'); return; }
+
+  const { error } = await sb.from('galleries')
+    .update({ cover_photo_id: photoId, cover_position_x: 50, cover_position_y: 50 }).eq('id', currentGalleryId);
+  if (error) { toast('Erro ao definir capa: ' + error.message, 'error'); return; }
+
+  const g = galleries.find(g => g.id === currentGalleryId);
+  if (g) { g.cover_photo_id = photoId; g.cover_position_x = 50; g.cover_position_y = 50; }
+
+  toast('Capa definida!', 'success');
+  if (typeof refreshDetailFacesBtn === 'function') refreshDetailFacesBtn(currentGalleryId);
   openDetail(currentGalleryId);
 }
 
 async function deletePhoto(photoId, storagePath) {
-  await sb.storage.from(BUCKET).remove([storagePath]);
+  // Fotos vivem no R2 (worker lrp-gallery-signed), não mais no Supabase Storage.
+  if (storagePath) {
+    await _deleteR2(storagePath);
+    await _deleteR2(`${storagePath}_thumb.webp`);
+  }
   await sb.from('photos').delete().eq('id', photoId);
   logAdminAction('delete_photo', { photoId, galleryId: currentGalleryId });
   openDetail(currentGalleryId);
@@ -192,6 +437,26 @@ function showConfirmModal(msg) {
     const onCancel = () => { document.getElementById('confirm-modal').classList.remove('open'); resolve(false); };
     document.getElementById('confirm-ok').addEventListener('click', onOk, { once: true });
     document.getElementById('confirm-cancel').addEventListener('click', onCancel, { once: true });
+  });
+}
+
+// Mesmo modal, com 3 saídas — usado quando o upload encontra um nome repetido.
+// Reaproveita #confirm-ok/#confirm-cancel (textos trocados) + o botão extra.
+function showDupeChoice(msg) {
+  return new Promise(resolve => {
+    const modal = document.getElementById('confirm-modal');
+    const ok = document.getElementById('confirm-ok'), cancel = document.getElementById('confirm-cancel'), extra = document.getElementById('confirm-extra');
+    document.getElementById('confirm-msg').textContent = msg;
+    ok.textContent = 'Substituir'; cancel.textContent = 'Manter as duas'; extra.style.display = '';
+    modal.classList.add('open');
+    const close = (val) => {
+      modal.classList.remove('open'); extra.style.display = 'none';
+      ok.textContent = 'Excluir'; cancel.textContent = 'Cancelar'; // devolve o modal ao estado padrão
+      resolve(val);
+    };
+    ok.addEventListener('click', () => close('replace'), { once: true });
+    extra.addEventListener('click', () => close('replace-all'), { once: true });
+    cancel.addEventListener('click', () => close('keep'), { once: true });
   });
 }
 
@@ -305,6 +570,38 @@ function qrCurrentGallery() {
   else toast('QR indisponível', 'error');
 }
 
+// ── LINKS EXTERNOS (fotos em alta/baixa — ex.: Google Drive) ──
+function renderResLinks(g) {
+  _setResLinkRow('high', g.high_res_url || null);
+  _setResLinkRow('low', g.low_res_url || null);
+}
+function _setResLinkRow(kind, url) {
+  const prefix = kind === 'high' ? 'detail-link-hi' : 'detail-link-lo';
+  document.getElementById(prefix).textContent = url || '— não definido —';
+  document.getElementById(prefix + '-qr').style.display = url ? 'inline-flex' : 'none';
+  document.getElementById(prefix + '-del').style.display = url ? 'inline-flex' : 'none';
+}
+async function setResLink(kind) {
+  if (!currentGalleryId) return;
+  const col = kind === 'high' ? 'high_res_url' : 'low_res_url';
+  const cur = document.getElementById(kind === 'high' ? 'detail-link-hi' : 'detail-link-lo').textContent;
+  const url = prompt(`Cole o link do Google Drive (fotos em ${kind === 'high' ? 'alta' : 'baixa'}):`, cur === '— não definido —' ? '' : cur);
+  if (url == null) return;
+  const clean = url.trim();
+  const { error } = await sb.from('galleries').update({ [col]: clean || null }).eq('id', currentGalleryId);
+  if (error) { toast('Erro ao salvar: ' + error.message, 'error'); return; }
+  _setResLinkRow(kind, clean || null);
+  toast('Link salvo', 'success');
+}
+async function clearResLink(kind) {
+  if (!currentGalleryId) return;
+  const col = kind === 'high' ? 'high_res_url' : 'low_res_url';
+  const { error } = await sb.from('galleries').update({ [col]: null }).eq('id', currentGalleryId);
+  if (error) { toast('Erro ao apagar: ' + error.message, 'error'); return; }
+  _setResLinkRow(kind, null);
+  toast('Link removido', '');
+}
+
 // ── COVER EDITOR ──
 function openCoverEditor(photoId, photoUrl, e) {
   if (e) e.stopPropagation();
@@ -376,9 +673,10 @@ let currentSettingsGalleryId = null;
 async function initSettingsScreen() {
   refreshMfaStatus();
   refreshAuditLog();
+  if (typeof refreshErrorLog === 'function') refreshErrorLog();
   const sel = document.getElementById('settings-gallery-select');
   sel.innerHTML = '<option value="">Selecione uma galeria</option>';
-  galleries.forEach(g => {
+  sortByCreatedDesc(galleries).forEach(g => {
     sel.innerHTML += `<option value="${g.id}">${esc(g.name)}</option>`;
   });
   document.getElementById('settings-form').style.display  = 'none';
@@ -477,4 +775,47 @@ async function saveGallerySettings() {
   toast('Configurações salvas!', 'success');
   const g = galleries.find(g => g.id === currentSettingsGalleryId);
   if (g) Object.assign(g, payload);
+}
+
+// ── Senha do álbum, direto no detalhe da galeria ────────────
+// Antes só existia em Configurações, que obriga a escolher a galeria de novo
+// mesmo já estando dentro de uma. Resultado: ninguém achava, e não dava para
+// saber se um álbum estava protegido sem abrir a tela e olhar o placeholder.
+function renderDetailPassword(g) {
+  const status = document.getElementById('detail-pw-status');
+  const clear  = document.getElementById('detail-pw-clear');
+  const input  = document.getElementById('detail-pw-input');
+  if (!status) return;
+  const tem = !!g.password_hash;
+  status.textContent = tem ? '🔒 Protegido' : 'Sem senha — qualquer um com o link abre';
+  status.style.color = tem ? 'var(--text)' : 'var(--muted)';
+  if (clear) clear.style.display = tem ? '' : 'none';
+  if (input) { input.value = ''; input.placeholder = tem ? 'Digite para trocar' : 'Digite a senha'; }
+}
+
+async function saveDetailPassword() {
+  const input = document.getElementById('detail-pw-input');
+  const raw = (input.value || '').trim();
+  if (!raw) { toast('Digite uma senha', 'error'); return; }
+  if (raw.length < 4) { toast('Use pelo menos 4 caracteres', 'error'); return; }
+  const hash = await hashSHA256(raw);
+  const { error } = await sb.from('galleries')
+    .update({ password_hash: hash }).eq('id', currentGalleryId);
+  if (error) { toast('Erro ao salvar: ' + error.message, 'error'); return; }
+  const g = galleries.find(x => x.id === currentGalleryId);
+  if (g) { g.password_hash = hash; renderDetailPassword(g); }
+  if (typeof renderDashboard === 'function') renderDashboard();
+  toast('Senha definida. O cliente vai precisar dela para abrir.', 'success');
+}
+
+async function clearDetailPassword() {
+  const ok = await showConfirmModal('Remover a senha? Qualquer pessoa com o link passa a abrir o álbum.');
+  if (!ok) return;
+  const { error } = await sb.from('galleries')
+    .update({ password_hash: null }).eq('id', currentGalleryId);
+  if (error) { toast('Erro ao remover: ' + error.message, 'error'); return; }
+  const g = galleries.find(x => x.id === currentGalleryId);
+  if (g) { g.password_hash = null; renderDetailPassword(g); }
+  if (typeof renderDashboard === 'function') renderDashboard();
+  toast('Senha removida.', 'success');
 }

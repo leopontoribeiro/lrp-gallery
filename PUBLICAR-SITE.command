@@ -9,6 +9,7 @@ cd "$(dirname "$0")" || { echo "Nao achei a pasta do projeto."; read; exit 1; }
 echo "==> 1/2 Preparando arquivos do site (pasta PUBLICAR)..."
 mkdir -p PUBLICAR
 rsync -a --delete \
+  --include 'robots.txt' \
   --exclude 'node_modules' --exclude '.git' --exclude '.wrangler' \
   --exclude 'r2-signed-worker' --exclude '.github' --exclude '.claude' \
   --exclude 'uploads' --exclude 'PUBLICAR' \

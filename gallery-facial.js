@@ -96,7 +96,7 @@ async function facialCapture() {
     if (!_facialIndex) { closeFacial(); toast('O índice facial deste álbum ainda está sendo preparado. Em breve!'); return; }
     // Se há um grupo/aba aberto, busca só dentro dele (mais rápido e certeiro).
     _facialScopeIds = (typeof currentGroup !== 'undefined' && currentGroup)
-      ? new Set(PHOTOS.filter(p => p.group === currentGroup).map(p => p.id))
+      ? new Set(PHOTOS.filter(p => (p.groups || []).includes(currentGroup)).map(p => p.id))
       : null;
     // Referências = sua selfie + rosto salvo neste aparelho (Opção 2)
     _facialRefs = [Array.from(det.descriptor), ...loadFaceProfile()];
@@ -112,21 +112,18 @@ async function facialCapture() {
 }
 async function loadFaceIndex() {
   try {
-    // Otimização: se há grupo/aba aberto, baixa só os rostos daquele grupo
-    // (filtro no servidor) — muito menos dados no celular.
-    const grp = (typeof currentGroup !== 'undefined' && currentGroup) ? currentGroup : null;
-    let { data } = await sb.rpc('get_face_index', { p_token: _galleryToken, p_group: grp });
-    // Grupo sem rostos indexados → cai pro índice inteiro (não deixa o cliente na mão).
-    if (grp && (!data || !Array.isArray(data.faces) || !data.faces.length)) {
-      _facialScopeIds = null;
-      const r = await sb.rpc('get_face_index', { p_token: _galleryToken, p_group: null });
-      data = r.data;
-    }
-    if (!data || !Array.isArray(data.faces) || !data.faces.length) return null;
+    // A RPC get_face_index (migração 9) recebe só p_token e devolve o índice
+    // inteiro do álbum. O escopo por grupo/aba é feito no cliente
+    // (_facialScopeIds em facialCapture), então não passamos p_group aqui —
+    // fazer isso muda a assinatura resolvida pelo PostgREST e a chamada falha.
+    const { data, error } = await sb.rpc('get_face_index', { p_token: _galleryToken });
+    if (error) { console.error('get_face_index:', error.message || error); return null; }
+    if (!data || !Array.isArray(data.faces)) return null; // sem índice de verdade
+    if (!data.faces.length) return data; // índice existe mas 0 rostos — não é "ainda processando"
     // Índice quantizado (int8) → volta pra float antes de comparar.
     if (data.qv === 1) { for (const f of data.faces) if (Array.isArray(f.d)) f.d = f.d.map(v => v / 127); }
     return data; // { faces: [{ p: photo_id, d: [128 floats], b: [x,y,w,h] }, ...] }
-  } catch (e) { return null; }
+  } catch (e) { console.error('loadFaceIndex:', e && e.message || e); return null; }
 }
 
 // Classifica cada foto em: incluída / dúvida / fora, usando referências e negativos.

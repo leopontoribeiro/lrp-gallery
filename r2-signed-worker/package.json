@@ -12,6 +12,6 @@
   "type": "commonjs",
   "dependencies": {
     "@cf-wasm/photon": "^0.3.6",
-    "client-zip": "^2.5.0"
+    "client-zip": "^1.7.0"
   }
 }

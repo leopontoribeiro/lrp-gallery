@@ -8,7 +8,14 @@
 const cover  = document.getElementById('cover');
 const header = document.getElementById('site-header');
 const obs    = new IntersectionObserver(
-  e => header.classList.toggle('hidden-on-cover', e[0].isIntersecting),
+  e => {
+    const onCover = e[0].isIntersecting;
+    header.classList.toggle('hidden-on-cover', onCover);
+    // O aviso de expiração acompanha o header (fica logo abaixo dele) —
+    // some junto na capa pra não flutuar solto sobre a foto.
+    const eb = document.getElementById('expiry-banner');
+    if (eb) eb.style.opacity = onCover ? '0' : '1';
+  },
   { threshold: 0.1 }
 );
 obs.observe(cover);
@@ -76,7 +83,7 @@ function makeCard(photo, w, h) {
     <img src="${photo.thumb}" loading="lazy" decoding="async" alt="${esc(photo.name)}"
          onload="photoCardSized(this)"
          onclick="openLightbox(${idx},event)">
-    <button class="card-heart" onclick="toggleLike(event,${photo.id},this)" title="Favoritar">
+    <button class="card-heart" onclick="toggleLike(event,'${photo.id}',this)" title="Favoritar">
       <svg viewBox="0 0 24 24" stroke-width="1.8">
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
       </svg>
@@ -154,29 +161,54 @@ function photoCardSized(img) {
 // ── GRUPOS ──
 let currentGroup = null; // null = todas
 
+// Popula a barra de abas (no grid) E a lista "Ver grupos" do drawer/índice —
+// mesmos dados, duas apresentações. selectGroup() mantém as duas em sincronia
+// via data-group (não por índice, já que só o drawer lista os nomes reais).
 function buildGroupTabs() {
   const bar = document.getElementById('group-tabs');
-  const groups = [...new Set(PHOTOS.map(p => p.group).filter(Boolean))];
-  if (!groups.length) { bar.style.display = 'none'; return; }
+  const drawerSection = document.getElementById('drawer-groups-section');
+  const drawerList = document.getElementById('drawer-group-list');
+  const groups = [...new Set(PHOTOS.flatMap(p => p.groups || []))];
+  if (!groups.length) {
+    bar.style.display = 'none';
+    if (drawerSection) drawerSection.style.display = 'none';
+    return;
+  }
   bar.style.display = 'flex';
   bar.innerHTML = '';
-  const mkBtn = (label, group, active) => {
+  if (drawerSection) drawerSection.style.display = 'block';
+  if (drawerList) drawerList.innerHTML = '';
+
+  const mkTab = (label, group, active) => {
     const btn = document.createElement('button');
     btn.className = 'group-tab' + (active ? ' active' : '');
+    btn.dataset.group = group || '';
     btn.textContent = label;
     btn.addEventListener('click', function() { selectGroup(group, this); });
     bar.appendChild(btn);
   };
-  mkBtn('Todas as Fotos', null, true);
-  groups.forEach(g => mkBtn(g, g, false));
+  const mkDrawerItem = (name) => {
+    if (!drawerList) return;
+    const btn = document.createElement('button');
+    btn.className = 'drawer-group-item';
+    btn.dataset.group = name;
+    btn.textContent = name;
+    btn.addEventListener('click', function() { selectGroup(name, this); closeDrawer(); });
+    drawerList.appendChild(btn);
+  };
+
+  mkTab('Todas as Fotos', null, true);
+  groups.forEach(g => { mkTab(g, g, false); mkDrawerItem(g); });
 }
 
 function selectGroup(name, btn) {
   currentGroup = name;
   currentView = 'all';
-  document.querySelectorAll('.group-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.group-tab, .drawer-group-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.group === (name || ''));
+  });
   if (btn) btn.classList.add('active');
-  const subset = name ? PHOTOS.filter(p => p.group === name) : [...PHOTOS];
+  const subset = name ? PHOTOS.filter(p => (p.groups || []).includes(name)) : [...PHOTOS];
   lbPhotos = subset;
   renderGrid(subset);
   document.getElementById('grid-section').scrollIntoView();

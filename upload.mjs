@@ -11,6 +11,8 @@
 // ============================================================
 
 import sharp from 'sharp';
+import exifr from 'exifr';
+import { initFaceApi, detectFacesInJpeg, toDetectionJpeg, buildIndexPayload } from './face-index-node.mjs';
 import { readdir, readFile } from 'node:fs/promises';
 import { basename, join, extname } from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -29,6 +31,7 @@ if (!URL_BASE || !SERVICE) die('Faltam SUPABASE_URL / SUPABASE_SERVICE_KEY no .e
 if (!R2_URL || !R2_SECRET) die('Faltam R2_UPLOAD_URL / R2_UPLOAD_SECRET no .env.upload (worker de imagens).');
 
 const folder = process.argv[2];
+const WANT_FACES = process.argv.includes('--faces');   // índice facial já no envio (opcional)
 if (!folder) die('Informe a pasta de fotos. Ex: node upload.mjs "/Users/voce/Desktop/Casamento"');
 
 const IMG_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.tif', '.tiff']);
@@ -36,6 +39,32 @@ const CT = { '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png', '.we
 
 const headersJSON = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' };
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+// Data de captura via EXIF — pra ordenar as fotos na sequência real do evento
+// (nome de arquivo não é confiável quando vêm de câmeras/celulares diferentes).
+async function captureTime(path) {
+  try {
+    const tags = await exifr.parse(path, ['DateTimeOriginal', 'CreateDate']);
+    const d = tags?.DateTimeOriginal || tags?.CreateDate;
+    return d instanceof Date && !isNaN(d) ? d.getTime() : null;
+  } catch { return null; }
+}
+async function sortByCaptureTime(folder, names) {
+  const withTime = [];
+  const CONC = 8;
+  for (let i = 0; i < names.length; i += CONC) {
+    const batch = names.slice(i, i + CONC);
+    const times = await Promise.all(batch.map(n => captureTime(join(folder, n))));
+    batch.forEach((n, k) => withTime.push({ name: n, time: times[k] }));
+  }
+  withTime.sort((a, b) => {
+    if (a.time != null && b.time != null) return a.time - b.time;
+    if (a.time != null) return -1;
+    if (b.time != null) return 1;
+    return collator.compare(a.name, b.name);
+  });
+  return withTime;
+}
 
 function slugify(name) {
   return name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -74,16 +103,22 @@ async function main() {
   try { entries = await readdir(folder, { withFileTypes: true }); }
   catch { die(`Pasta não encontrada: ${folder}`); }
 
-  const files = entries
+  const names = entries
     .filter(e => e.isFile() && IMG_EXT.has(extname(e.name).toLowerCase()) && !e.name.startsWith('.'))
-    .map(e => e.name).sort(collator.compare);
-  if (files.length === 0) die('Nenhuma imagem encontrada na pasta.');
+    .map(e => e.name);
+  if (names.length === 0) die('Nenhuma imagem encontrada na pasta.');
 
   const galleryName = basename(folder).trim();
   log(`\n${C.bold}${C.cyan}LRP Gallery — Uploader (R2)${C.reset}`);
   log(`${C.dim}Pasta:${C.reset}   ${folder}`);
   log(`${C.dim}Galeria:${C.reset} ${galleryName}`);
-  log(`${C.dim}Fotos:${C.reset}   ${files.length}\n`);
+  log(`${C.dim}Fotos:${C.reset}   ${names.length}`);
+
+  log(`${C.dim}Lendo data de captura (EXIF)...${C.reset}`);
+  const ordered = await sortByCaptureTime(folder, names);
+  const withExif = ordered.filter(x => x.time != null).length;
+  const files = ordered.map(x => x.name);
+  log(`${C.dim}${withExif}/${files.length} com data EXIF — ordenadas por hora de captura (sem EXIF vão pro fim, por nome).${C.reset}\n`);
 
   const slug = await uniqueSlug(slugify(galleryName));
   const access_token = randomBytes(16).toString('hex');
@@ -92,6 +127,16 @@ async function main() {
     body: JSON.stringify({ name: galleryName, slug, status: 'live', access_token }),
   });
   log(`${C.green}✓ Galeria criada${C.reset} ${C.dim}(slug: ${slug})${C.reset}\n`);
+
+  // Reconhecimento facial local: OPCIONAL, só com --faces. Por padrão o envio
+  // é mais rápido e os rostos ficam pro botão "Escanear rostos" do painel.
+  const faceApi = WANT_FACES
+    ? await initFaceApi()
+    : { ok: false, reason: 'não pedido' };
+  if (WANT_FACES && faceApi.ok) log(`${C.dim}Reconhecimento facial: ligado (índice gerado durante o envio).${C.reset}`);
+  else if (WANT_FACES) log(`${C.yellow}Reconhecimento facial indisponível (${faceApi.reason}). O upload segue normal.${C.reset}`);
+  else log(`${C.dim}Rostos: escaneie depois pelo botão do painel (ou use --faces pra já sair indexado).${C.reset}`);
+  const faceRows = []; const facePhotoIds = []; let faceFailed = 0;
 
   const BATCH = 4;
   let done = 0, failed = 0; const failures = [];
@@ -117,14 +162,27 @@ async function main() {
         const fullUrl  = await putR2(fullKey, bytes, ct);
         const thumbUrl = thumbBytes ? await putR2(thumbKey, thumbBytes, 'image/webp') : fullUrl;
 
-        await api('photos', {
-          method: 'POST',
+        const [photo] = await api('photos', {
+          method: 'POST', headers: { Prefer: 'return=representation' },
           body: JSON.stringify({
             gallery_id: gallery.id, filename: name,
             storage_path: fullKey, thumb_url: thumbUrl, full_url: fullUrl,
             size_bytes: bytes.length, position, width, height,
           }),
         });
+
+        // Índice facial já aqui — os bytes estão em memória, então sai de graça.
+        // Sem isso o álbum só era indexado quando o painel fosse aberto no navegador.
+        if (faceApi && faceApi.ok && photo && photo.id) {
+          try {
+            const found = await detectFacesInJpeg(faceApi, await toDetectionJpeg(sharp, bytes));
+            for (const f of found) faceRows.push({ p: photo.id, d: f.d, b: f.b });
+            facePhotoIds.push(photo.id);
+          } catch (e) {
+            // rosto é acessório: falhou aqui, a foto continua enviada
+            faceFailed++;
+          }
+        }
         done++;
       } catch (err) {
         failed++; failures.push(name);
@@ -137,6 +195,22 @@ async function main() {
 
   const [firstPhoto] = await api(`photos?gallery_id=eq.${gallery.id}&order=position.asc&limit=1&select=id`);
   if (firstPhoto) await api(`galleries?id=eq.${gallery.id}`, { method: 'PATCH', body: JSON.stringify({ cover_photo_id: firstPhoto.id }) });
+
+  // Grava o índice facial (mesmo formato do painel: qv:1, descritor int8).
+  if (faceApi.ok && facePhotoIds.length) {
+    try {
+      const payload = buildIndexPayload(faceRows, facePhotoIds);
+      await api('face_indexes', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ gallery_id: gallery.id, ...payload }),
+      });
+      log(`\n${C.green}✓ Índice facial:${C.reset} ${faceRows.length} rosto(s) em ${facePhotoIds.length} foto(s)`
+        + (faceFailed ? ` ${C.yellow}(${faceFailed} foto(s) não processada(s))${C.reset}` : ''));
+    } catch (e) {
+      log(`\n${C.yellow}Índice facial não pôde ser salvo (${e.message}). Abra a galeria no painel para gerar.${C.reset}`);
+    }
+  }
 
   const link = `${SITE}/gallery.html?t=${access_token}`;
   log(`\n\n${C.green}${C.bold}✓ Concluído!${C.reset} ${done} foto(s) enviada(s)${failed ? `, ${C.red}${failed} falha(s)${C.reset}` : ''}.`);

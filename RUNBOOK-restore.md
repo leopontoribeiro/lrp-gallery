@@ -5,7 +5,9 @@ Faça este drill uma vez agora e repita a cada trimestre. RTO alvo: < 2h.
 
 ## O que existe de backup
 - **Fotos**: dual-write no upload (`PHOTOS` → `BACKUP` = bucket R2 `gallery-photos-backup`) + reconciliação diária (cron 04:00 UTC no worker `lrp-gallery-signed`).
-- **Banco (Supabase)**: dump diário via GitHub Action `backup.yml` → gravado em `backups/` no bucket `BACKUP` (via `backup-db.mjs`).
+- **Banco (Supabase)**: dump diário no CRON DO WORKER `lrp-gallery-signed` (04:00 UTC, função `backupDatabase`) → gravado em `backups/` no bucket `BACKUP`.
+  - ATENÇÃO: a GitHub Action `backup.yml` que fazia isso foi REMOVIDA do repo. O script `backup-db.mjs` continua existindo só para execução manual.
+  - Para checar se o cron rodou: leia `_state/last_reconcile.json` no bucket `BACKUP` (data, quantos objetos varridos, falhas).
 
 ## A. Restaurar o banco (Supabase)
 1. Baixe o dump mais recente do R2: prefixo `backups/` no bucket `gallery-photos-backup` (ordene por data).

@@ -1,6 +1,6 @@
 // ── SELEÇÕES DO CLIENTE + VENDAS + DASHBOARD + NEW GALLERY ──
 // Extraído de admin.html (fatia de modularização). Depende de globals do
-// script principal (sb, toast, signUrls, galleries, pendingFiles, BUCKET,
+// script principal (sb, toast, signUrls, galleries, pendingFiles,
 // openDetail) — só usados dentro das funções.
 function updateSelectionsBadge(n) {
   const b = document.getElementById('nav-badge-selections');
@@ -152,7 +152,32 @@ async function renderDashboard() {
   document.getElementById('stat-clients').textContent = galleries.length;
   document.getElementById('nav-badge').textContent = galleries.length;
 
-  if(galleries.length === 0) {
+  // Grupos: renderizados como card único no dashboard — os álbuns filhos não
+  // aparecem soltos aqui (só dentro do grupo, via "Gerenciar grupo").
+  const { data: groupsData } = await sb.from('gallery_groups')
+    .select('id,name,status,access_token,cover_photo_id')
+    .is('deleted_at', null).order('created_at', { ascending: false });
+  const groups = groupsData || [];
+  const kidsByGroupId = {};
+  galleries.forEach(g => { if (g.gallery_group_id) (kidsByGroupId[g.gallery_group_id] ||= []).push(g); });
+
+  const ownCoverIds = groups.filter(gr => gr.cover_photo_id).map(gr => gr.cover_photo_id);
+  let ownCoverRaw = {};
+  if (ownCoverIds.length) {
+    const { data: covPhotos } = await sb.from('photos').select('id,thumb_url').in('id', ownCoverIds);
+    (covPhotos || []).forEach(p => { ownCoverRaw[p.id] = p.thumb_url; });
+  }
+  const ownCoverSigned = await signUrls(groups.map(gr => (gr.cover_photo_id && ownCoverRaw[gr.cover_photo_id]) || ''));
+  groups.forEach((gr, i) => {
+    gr._kids = kidsByGroupId[gr.id] || [];
+    gr._photoCount = gr._kids.reduce((s,k) => s + (k._count||0), 0);
+    gr._coverThumb = ownCoverSigned[i] || (gr._kids[0] && gr._kids[0]._coverThumb) || null;
+  });
+
+  const ungrouped = sortByEventDate(galleries.filter(g => !g.gallery_group_id));
+  const sortedGroups = sortByEventDate(groups);
+
+  if (galleries.length === 0 && groups.length === 0) {
     grid.style.display = 'none';
     empty.style.display = 'block';
     return;
@@ -162,15 +187,47 @@ async function renderDashboard() {
   empty.style.display = 'none';
   grid.innerHTML = '';
 
-  galleries.forEach(g => {
+  sortedGroups.forEach(gr => {
+    const thumb = gr._coverThumb || `https://picsum.photos/400/225?random=${gr.id}`;
+    const card = document.createElement('div');
+    card.className = 'gallery-card';
+    card.innerHTML = `
+      <img class="gallery-card-thumb" src="${thumb}" alt="${esc(gr.name)}" loading="lazy"
+        ondblclick="manageGroup('${gr.id}')" title="Duplo clique para gerenciar o grupo" style="cursor:pointer">
+      <div class="gallery-card-body">
+        <div class="gallery-card-name">
+          <span style="font-family:var(--mono);font-size:.55rem;letter-spacing:.1em;color:var(--accent);border:1px solid var(--accent);border-radius:3px;padding:1px 5px;margin-right:6px;vertical-align:middle">GRUPO</span>${esc(gr.name)}
+        </div>
+        <div class="gallery-card-meta">
+          <span class="gallery-card-info">${gr._kids.length} álbum(ns) · ${gr._photoCount} fotos</span>
+          <span class="status-badge ${gr.status==='live'?'status-live':'status-draft'}">${gr.status==='live'?'Compartilhado':'Desligado'}</span>
+        </div>
+      </div>
+      <div class="gallery-card-actions">
+        <button class="btn btn-ghost" style="padding:6px 12px;font-size:0.65rem" onclick="manageGroup('${gr.id}')">
+          <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Gerenciar grupo
+        </button>
+        <button class="btn btn-ghost" style="padding:6px 12px;font-size:0.65rem" onclick="copyGroupLink('${gr.access_token}')">
+          <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copiar link
+        </button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  ungrouped.forEach(g => {
     const thumb = g._coverThumb || `https://picsum.photos/400/225?random=${g.id}`;
     const coverPos = `${g.cover_position_x ?? 50}% ${g.cover_position_y ?? 50}%`;
     const card = document.createElement('div');
     card.className = 'gallery-card';
     card.innerHTML = `
-      <img class="gallery-card-thumb" src="${thumb}" alt="${esc(g.name)}" loading="lazy" style="object-position:${coverPos}">
+      <img class="gallery-card-thumb" src="${thumb}" alt="${esc(g.name)}" loading="lazy"
+        ondblclick="openDetail('${g.id}')" title="Duplo clique para gerenciar a galeria"
+        style="object-position:${coverPos};cursor:pointer">
       <div class="gallery-card-body">
-        <div class="gallery-card-name">${esc(g.name)}</div>
+        <div class="gallery-card-name">${g.password_hash ? '<span title="Protegido por senha" style="margin-right:5px">&#128274;</span>' : ''}${esc(g.name)}</div>
         <div class="gallery-card-meta">
           <span class="gallery-card-info">${g._count||0} fotos · ${esc(g.date)||'—'}</span>
           <span class="status-badge ${g.status==='live'?'status-live':'status-draft'}">${g.status==='live'?'Live':'Rascunho'}</span>
@@ -209,6 +266,140 @@ function resetNewForm() {
   document.getElementById('input-location').value = '';
   document.getElementById('upload-list').innerHTML = '';
   pendingFiles = [];
+  clearCoverFile();
+}
+
+// ── CAPA (seleção na criação da galeria) ──
+function handleCoverFile(file) {
+  if (!file) return;
+  pendingCoverFile = file;
+  document.getElementById('cover-preview-img').src = URL.createObjectURL(file);
+  document.getElementById('cover-zone-empty').style.display = 'none';
+  document.getElementById('cover-zone-preview').style.display = 'block';
+}
+function clearCoverFile() {
+  pendingCoverFile = null;
+  const input = document.getElementById('cover-file-input');
+  if (input) input.value = '';
+  const empty = document.getElementById('cover-zone-empty');
+  const preview = document.getElementById('cover-zone-preview');
+  if (empty) empty.style.display = '';
+  if (preview) preview.style.display = 'none';
+}
+
+// Fotos vivem no R2 (worker lrp-gallery-signed), não no Supabase Storage —
+// esse bucket foi apagado na migração pro R2. Mesma convenção do upload.mjs
+// (CLI): key = galleries/<id>/<ts>_<pos>_<nome>, thumb = key + "_thumb.webp".
+const R2_UPLOAD_BASE = 'https://lrp-gallery-signed.lrp-gallery.workers.dev';
+
+function _loadImageEl(file) {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file);
+    const im = new Image();
+    im.onload  = () => resolve({ im, url, w: im.naturalWidth, h: im.naturalHeight });
+    im.onerror = () => { URL.revokeObjectURL(url); resolve({ im: null, url: null, w: null, h: null }); };
+    im.src = url;
+  });
+}
+
+// Derivado médio (1600px, JPEG). Serve de fonte para a marca d'água no Worker:
+// aplicar marca no ORIGINAL estourava a memória do isolate (um JPEG de 24MP
+// vira ~96MB descompactado, acima do limite de 128MB) e o pedido morria com
+// "unreachable". Redimensionar aqui, no navegador, sai de graça — a imagem já
+// está decodificada para gerar a miniatura.
+function _makeLgBlob(im, w, h) {
+  if (!im) return Promise.resolve(null);
+  const MAX = 1600;
+  const scale = Math.min(1, MAX / Math.max(w, h));
+  const lw = Math.max(1, Math.round(w * scale)), lh = Math.max(1, Math.round(h * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = lw; canvas.height = lh;
+  canvas.getContext('2d').drawImage(im, 0, 0, lw, lh);
+  return new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.85));
+}
+
+function _makeThumbBlob(im, w, h) {
+  if (!im) return Promise.resolve(null);
+  const MAX = 800;
+  const scale = Math.min(1, MAX / Math.max(w, h));
+  const tw = Math.max(1, Math.round(w * scale)), th = Math.max(1, Math.round(h * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = tw; canvas.height = th;
+  canvas.getContext('2d').drawImage(im, 0, 0, tw, th);
+  return new Promise(res => canvas.toBlob(res, 'image/webp', 0.8));
+}
+
+// Pede à RPC (admin autenticado) uma assinatura de curta duração pra essa key
+// e sobe os bytes pro worker R2. Nunca carrega o UPLOAD_SECRET no navegador.
+async function _putR2(key, body, contentType) {
+  const { data: auth, error: authErr } = await sb.rpc('get_upload_sig', { p_key: key });
+  if (authErr || !auth || auth.error) { console.error('_putR2 (auth):', authErr || auth); return null; }
+  const res = await fetch(`${R2_UPLOAD_BASE}/${key}?exp=${auth.exp}&sig=${auth.sig}`, {
+    method: 'PUT', headers: { 'Content-Type': contentType }, body
+  });
+  if (!res.ok) { console.error('_putR2 (upload):', res.status, await res.text().catch(() => '')); return null; }
+  return `${R2_UPLOAD_BASE}/${key}`;
+}
+
+// Mesmo esquema do upload, mas com RPC/suffix próprios (get_delete_sig, ':del')
+// — uma assinatura de upload vazada não serve pra apagar. Idempotente: apagar
+// uma key que não existe no R2 não é erro.
+async function _deleteR2(key) {
+  const { data: auth, error: authErr } = await sb.rpc('get_delete_sig', { p_key: key });
+  if (authErr || !auth || auth.error) { console.error('_deleteR2 (auth):', authErr || auth); return false; }
+  const res = await fetch(`${R2_UPLOAD_BASE}/${key}?exp=${auth.exp}&sig=${auth.sig}`, { method: 'DELETE' });
+  if (!res.ok) { console.error('_deleteR2:', res.status, await res.text().catch(() => '')); return false; }
+  return true;
+}
+
+// Upload genérico de 1 foto p/ uma galeria (R2 + insert em `photos`).
+// Reusado pela criação de galeria, "Adicionar fotos" e o picker de capa
+// (nova galeria, detalhe da galeria, grupos).
+// 'replace-all' fica valendo pro resto do lote atual (reset a cada novo upload em lote,
+// ver resetDupePolicy em createGallery/addPhotosToDetail) — evita perguntar foto por foto.
+let _dupePolicy = null;
+function resetDupePolicy() { _dupePolicy = null; }
+
+async function uploadGalleryPhoto(file, galleryId, position) {
+  // Já existe foto com esse nome nesta galeria? Pergunta substituir ou duplicar.
+  const { data: dup } = await sb.from('photos').select('id,storage_path,size_bytes')
+    .eq('gallery_id', galleryId).eq('filename', file.name).maybeSingle();
+  if (dup) {
+    // Mesmo nome + mesmo tamanho = essa foto já subiu numa tentativa anterior
+    // (retomando um envio que parou na metade) — não reenvia, não pergunta nada.
+    if (dup.size_bytes === file.size) return dup.id;
+    const choice = _dupePolicy === 'replace-all' ? 'replace-all'
+      : await showDupeChoice(`Já existe uma foto chamada "${file.name}" nesta galeria.`);
+    if (choice === 'replace-all') _dupePolicy = 'replace-all';
+    if (choice === 'replace' || choice === 'replace-all') {
+      if (dup.storage_path) { await _deleteR2(dup.storage_path); await _deleteR2(`${dup.storage_path}_thumb.webp`); await _deleteR2(`${dup.storage_path}_lg.jpg`); }
+      await sb.from('photos').delete().eq('id', dup.id);
+    }
+  }
+
+  const { im, url, w, h } = await _loadImageEl(file);
+  const thumbBlob = await _makeThumbBlob(im, w, h);
+  const lgBlob    = await _makeLgBlob(im, w, h);
+  if (url) URL.revokeObjectURL(url);
+
+  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const baseKey = `galleries/${galleryId}/${Date.now()}_${position}_${safe}`;
+
+  const fullUrl = await _putR2(baseKey, file, file.type || 'application/octet-stream');
+  if (!fullUrl) return null;
+  const thumbUrl = thumbBlob ? await _putR2(`${baseKey}_thumb.webp`, thumbBlob, 'image/webp') : fullUrl;
+  // Falha aqui não impede o envio da foto — só faz a marca d'água cair no
+  // caminho lento (e limitado) de processar o original.
+  if (lgBlob) { try { await _putR2(`${baseKey}_lg.jpg`, lgBlob, 'image/jpeg'); } catch (e) {} }
+
+  const { data: photo, error: insErr } = await sb.from('photos').insert({
+    gallery_id: galleryId, filename: file.name,
+    storage_path: baseKey, thumb_url: thumbUrl || fullUrl,
+    full_url: fullUrl, size_bytes: file.size, position,
+    width: w, height: h
+  }).select('id').single();
+  if (insErr) console.error('uploadGalleryPhoto (insert):', insErr);
+  return photo?.id || null;
 }
 
 function handleFiles(files) {
@@ -241,6 +432,7 @@ function setProgress(id, pct, done=false, err=false) {
 }
 
 async function createGallery() {
+  resetDupePolicy();
   const name = document.getElementById('input-name').value.trim();
   if(!name) { toast('Digite o nome do evento', 'error'); return; }
 
@@ -269,43 +461,30 @@ async function createGallery() {
 
   if(gErr) { toast('Erro: ' + gErr.message, 'error'); return; }
 
-  // 2. Upload das fotos
+  let pos = 0;
+
+  // 2. Upload da capa (se escolhida) — fica em position 0.
+  let coverPhotoId = null;
+  if (pendingCoverFile) {
+    coverPhotoId = await uploadGalleryPhoto(pendingCoverFile, gallery.id, pos++);
+  }
+
+  // 3. Upload das fotos do álbum
   if(pendingFiles.length > 0) {
-    let pos = 0;
     for(const {id, file} of pendingFiles) {
-      setProgress(id, 10);
-      const dims = await new Promise(res => {
-        const url = URL.createObjectURL(file);
-        const im = new Image();
-        im.onload  = () => { URL.revokeObjectURL(url); res({ w: im.naturalWidth, h: im.naturalHeight }); };
-        im.onerror = () => { URL.revokeObjectURL(url); res({ w: null, h: null }); };
-        im.src = url;
-      });
-      const path = `galleries/${gallery.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
-
-      setProgress(id, 20);
-      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type });
-      if(upErr) { setProgress(id, 0, false, true); continue; }
-
-      setProgress(id, 70);
-
-      const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(path);
-      const fullUrl = urlData.publicUrl;
-      const { data: thumbData } = sb.storage.from(BUCKET).getPublicUrl(path, { transform: { width: 800, height: 800, resize: 'contain', quality: 80, format: 'webp' } });
-      const thumbUrl = thumbData.publicUrl;
-
-      await sb.from('photos').insert({
-        gallery_id: gallery.id, filename: file.name,
-        storage_path: path, thumb_url: thumbUrl,
-        full_url: fullUrl, size_bytes: file.size, position: pos++,
-        width: dims.w, height: dims.h
-      });
-
-      setProgress(id, 100, true);
+      setProgress(id, 30);
+      let photoId = null;
+      try { photoId = await uploadGalleryPhoto(file, gallery.id, pos++); }
+      catch (e) { console.error('createGallery (foto):', e); }
+      setProgress(id, 100, !!photoId, !photoId);
     }
   }
 
-  logAdminAction('create_gallery', { galleryId: gallery.id, name, photoCount: pendingFiles.length });
+  if (coverPhotoId) {
+    await sb.from('galleries').update({ cover_photo_id: coverPhotoId }).eq('id', gallery.id);
+  }
+
+  logAdminAction('create_gallery', { galleryId: gallery.id, name, photoCount: pendingFiles.length + (coverPhotoId ? 1 : 0) });
   toast(`"${name}" criada!`, 'success');
   setTimeout(() => openDetail(gallery.id), 600);
 }

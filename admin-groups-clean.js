@@ -60,9 +60,10 @@ async function renderGroupsClean() {
   if (!container) return;
   container.innerHTML = '<div style="color:var(--muted);padding:16px">Carregando grupos…</div>';
 
-  const { data: groups, error } = await sb.from('gallery_groups')
+  const { data: groupsRaw, error } = await sb.from('gallery_groups')
     .select('*').is('deleted_at', null).order('created_at', { ascending: false });
   if (error) { container.innerHTML = '<div style="color:#ff6a6a;padding:16px">Erro: ' + esc(error.message) + '</div>'; return; }
+  const groups = sortByEventDate(groupsRaw);
 
   // Filhas (álbuns) de cada grupo, com capa assinada
   const kidsByGroup = {};
@@ -82,7 +83,7 @@ async function renderGroupsClean() {
     }
     const signed = await signUrls((kids || []).map(k => k._thumb || ''));
     (kids || []).forEach((k, i) => { if (k._thumb) k._thumb = signed[i] || k._thumb; });
-    kidsByGroup[gr.id] = kids || [];
+    kidsByGroup[gr.id] = sortByEventDate(kids || []);
   }));
 
   const btn = (label, onclick, accent) =>
@@ -107,7 +108,7 @@ async function renderGroupsClean() {
     const kids = kidsByGroup[gr.id] || [];
 
     // Cabeçalho do grupo
-    html += `<section style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px">
+    html += `<section id="group-${gr.id}" style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px;transition:box-shadow .3s">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
         <div>
           <div style="color:var(--text);font-size:1.15rem;font-weight:800;letter-spacing:.3px">${esc(gr.name)}</div>
@@ -120,7 +121,11 @@ async function renderGroupsClean() {
           ${btn('Criar álbum', `createAlbumInGroup('${gr.id}')`, true)}
           ${btn('Copiar link', `copyGroupLink('${gr.access_token}')`)}
           ${btn('QR Code', `groupQR('${gr.access_token}')`)}
+          ${btn('Capa', `groupPickCover('${gr.id}')`)}
+          ${btn(gr.video_url ? 'Vídeo ✓' : 'Vídeo', `groupPickVideo('${gr.id}')`)}
+          ${gr.video_url ? btn('Remover vídeo', `groupRemoveVideo('${gr.id}')`) : ''}
           ${btn('Renomear', `renameGroupClean('${gr.id}')`)}
+          ${btn(gr.password_hash ? 'Senha ✓' : 'Senha', `setGroupPassword('${gr.id}')`)}
           ${btn(on ? 'Desligar' : 'Ligar', `toggleGroupShareClean('${gr.id}','${gr.status}')`)}
           ${btn('Apagar', `deleteGroupClean('${gr.id}','${nm}')`)}
         </div>
@@ -142,8 +147,12 @@ async function renderGroupsClean() {
               <div style="color:var(--text);font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(k.name)}</div>
               <div style="color:var(--muted);font-size:.66rem;margin-top:2px">${k._count || 0} fotos</div>
             </div>
-            <div style="padding:0 11px 9px">
-              <button onclick="event.stopPropagation();copyKidLink('${k.access_token}')" style="width:100%;padding:6px 8px;font-size:.62rem;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text)">Compartilhar</button>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;padding:0 9px 10px">
+              <button onclick="event.stopPropagation();copyKidLink('${k.access_token}')" style="flex:1;min-width:52px;padding:6px 4px;font-size:.6rem;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text)">Link</button>
+              <button onclick="event.stopPropagation();showQRForLink('${BASE_URL}/gallery.html?t=${k.access_token}')" style="flex:1;min-width:40px;padding:6px 4px;font-size:.6rem;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text)">QR</button>
+              <button onclick="event.stopPropagation();kidDownloadZip('${k.id}','${esc(k.name).replace(/'/g, "\\'")}')" style="flex:1;min-width:52px;padding:6px 4px;font-size:.6rem;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text)">Baixar</button>
+              <button onclick="event.stopPropagation();kidPickCover('${k.id}')" style="flex:1;min-width:52px;padding:6px 4px;font-size:.6rem;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text)">Capa</button>
+              <button onclick="event.stopPropagation();kidDelete('${k.id}','${esc(k.name).replace(/'/g, "\\'")}')" style="flex:1;min-width:52px;padding:6px 4px;font-size:.6rem;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:transparent;color:#ff8a8a">Apagar</button>
             </div>
           </div>`;
       }
@@ -162,6 +171,178 @@ function copyKidLink(token) {
   navigator.clipboard.writeText(`${BASE_URL}/gallery.html?t=${token}`).then(() => toast('Link da galeria copiado!', 'success'));
 }
 
+// Baixa todas as fotos do álbum num .zip nomeado com o nome do álbum.
+// Lê direto de photos+signUrls (sessão admin) em vez do RPC público de zip,
+// que exige status 'live' — assim funciona mesmo com o álbum desligado.
+async function kidDownloadZip(id, name) {
+  toast('Preparando ZIP...', '');
+  const { data: photos, error } = await sb.from('photos')
+    .select('filename, full_url').eq('gallery_id', id).order('position');
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  if (!photos || !photos.length) { toast('Álbum sem fotos', 'error'); return; }
+
+  const signed = await signUrls(photos.map(p => p.full_url || ''));
+  const zip = new JSZip();
+  const used = new Set();
+  let done = 0;
+  for (let i = 0; i < photos.length; i++) {
+    try {
+      const resp = await fetch(signed[i] || photos[i].full_url);
+      let fname = photos[i].filename || `foto-${i + 1}.jpg`;
+      if (used.has(fname)) fname = `${i + 1}_${fname}`;
+      used.add(fname);
+      zip.file(fname, await resp.blob());
+      done++;
+      if (done % 10 === 0) toast(`Baixando... ${done}/${photos.length}`);
+    } catch (e) {}
+  }
+  if (!done) { toast('Não foi possível baixar as fotos', 'error'); return; }
+  toast(`Gerando ZIP com ${done} foto(s)...`, '');
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const safe = String(name).replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim() || 'album';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${safe}.zip`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  toast('ZIP pronto!', 'success');
+}
+
+// Capa do GRUPO (galeria-mãe): a foto precisa pertencer a algum álbum (FK de
+// `photos`), então sobe pro primeiro álbum do grupo e aponta o grupo pra ela.
+function groupPickCover(groupId) {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = () => { if (input.files[0]) groupSetCover(groupId, input.files[0]); };
+  input.click();
+}
+async function groupSetCover(groupId, file) {
+  const { data: kid } = await sb.from('galleries').select('id')
+    .eq('gallery_group_id', groupId).is('deleted_at', null).order('created_at', { ascending: true }).limit(1).maybeSingle();
+  if (!kid) { toast('Crie um álbum neste grupo primeiro', 'error'); return; }
+
+  toast('Enviando capa...', '');
+  const { data: existing } = await sb.from('photos').select('position')
+    .eq('gallery_id', kid.id).order('position', { ascending: false }).limit(1);
+  const pos = (existing?.[0]?.position ?? -1) + 1;
+
+  const photoId = await uploadGalleryPhoto(file, kid.id, pos);
+  if (!photoId) { toast('Erro ao enviar a capa', 'error'); return; }
+
+  const { error } = await sb.from('gallery_groups')
+    .update({ cover_photo_id: photoId, cover_position_x: 50, cover_position_y: 50 }).eq('id', groupId);
+  if (error) { toast('Erro ao definir capa: ' + error.message, 'error'); return; }
+
+  toast('Capa do grupo definida!', 'success');
+  renderGroupsClean();
+}
+
+// ── Vídeo do evento (opcional, 1 por grupo) ──
+// Mesma lógica de "capa do grupo": o arquivo mora na key de um álbum-filho
+// (galleries/<id>/...) pra reaproveitar 100% da assinatura já existente;
+// só a REFERÊNCIA (video_url/video_thumb_url) fica em gallery_groups —
+// não vira uma "foto" (não entra no grid/zip/índice facial).
+function groupPickVideo(groupId) {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'video/*';
+  input.onchange = () => { if (input.files[0]) groupSetVideo(groupId, input.files[0]); };
+  input.click();
+}
+
+function _grabVideoPoster(videoEl) {
+  return new Promise(res => {
+    const canvas = document.createElement('canvas');
+    canvas.width = videoEl.videoWidth; canvas.height = videoEl.videoHeight;
+    canvas.getContext('2d').drawImage(videoEl, 0, 0);
+    canvas.toBlob(res, 'image/jpeg', 0.85);
+  });
+}
+
+async function groupSetVideo(groupId, file) {
+  const { data: kid } = await sb.from('galleries').select('id')
+    .eq('gallery_group_id', groupId).is('deleted_at', null).order('created_at', { ascending: true }).limit(1).maybeSingle();
+  if (!kid) { toast('Crie um álbum neste grupo primeiro', 'error'); return; }
+
+  // Carrega o vídeo só no navegador (sem subir ainda) pra checar duração e tirar o poster.
+  const url = URL.createObjectURL(file);
+  const videoEl = document.createElement('video');
+  videoEl.muted = true; videoEl.src = url;
+  await new Promise((res, rej) => { videoEl.onloadedmetadata = res; videoEl.onerror = rej; });
+
+  if (videoEl.duration > 600 && !confirm(`Esse vídeo tem ${Math.round(videoEl.duration / 60)} min — o recomendado é até 10 min. Subir assim mesmo?`)) {
+    URL.revokeObjectURL(url); return;
+  }
+  videoEl.currentTime = Math.min(1, videoEl.duration / 2);
+  await new Promise(res => { videoEl.onseeked = res; });
+  const posterBlob = await _grabVideoPoster(videoEl);
+  URL.revokeObjectURL(url);
+
+  toast('Enviando vídeo... isso pode demorar um pouco', '');
+  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const baseKey = `galleries/${kid.id}/video_${Date.now()}_${safe}`;
+  const videoUrl = await _putR2(baseKey, file, file.type || 'video/mp4');
+  if (!videoUrl) { toast('Erro ao enviar o vídeo', 'error'); return; }
+  const posterUrl = posterBlob ? await _putR2(`${baseKey}_poster.jpg`, posterBlob, 'image/jpeg') : null;
+
+  const { error } = await sb.from('gallery_groups').update({
+    video_url: videoUrl, video_thumb_url: posterUrl, video_filename: file.name
+  }).eq('id', groupId);
+  if (error) { toast('Erro ao salvar vídeo: ' + error.message, 'error'); return; }
+
+  toast('Vídeo do evento definido!', 'success');
+  renderGroupsClean();
+}
+
+async function groupRemoveVideo(groupId) {
+  if (!confirm('Remover o vídeo deste grupo? O arquivo continua no armazenamento, só deixa de aparecer pro cliente.')) return;
+  const { error } = await sb.from('gallery_groups')
+    .update({ video_url: null, video_thumb_url: null, video_filename: null }).eq('id', groupId);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  toast('Vídeo removido', 'success');
+  renderGroupsClean();
+}
+
+// Capa do álbum (filho do grupo): escolhe um arquivo e já define como capa.
+function kidPickCover(id) {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = () => { if (input.files[0]) kidSetCover(id, input.files[0]); };
+  input.click();
+}
+async function kidSetCover(id, file) {
+  toast('Enviando capa...', '');
+  const { data: existing } = await sb.from('photos').select('position')
+    .eq('gallery_id', id).order('position', { ascending: false }).limit(1);
+  const pos = (existing?.[0]?.position ?? -1) + 1;
+
+  const photoId = await uploadGalleryPhoto(file, id, pos);
+  if (!photoId) { toast('Erro ao enviar a capa', 'error'); return; }
+
+  const { error } = await sb.from('galleries')
+    .update({ cover_photo_id: photoId, cover_position_x: 50, cover_position_y: 50 }).eq('id', id);
+  if (error) { toast('Erro ao definir capa: ' + error.message, 'error'); return; }
+
+  toast('Capa definida!', 'success');
+  renderGroupsClean();
+}
+
+// Vem do dashboard: abre a tela de Grupos e rola/realça o grupo clicado.
+async function manageGroup(groupId) {
+  if (typeof goTo === 'function') goTo('groups');
+  await renderGroupsClean();
+  const el = document.getElementById('group-' + groupId);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el.style.boxShadow = '0 0 0 2px var(--accent)';
+  setTimeout(() => { el.style.boxShadow = ''; }, 1600);
+}
+
+async function kidDelete(id, name) {
+  if (!confirm(`Apagar o álbum "${name}"? É reversível.`)) return;
+  const { error } = await sb.from('galleries').update({ deleted_at: new Date().toISOString(), status: 'draft' }).eq('id', id);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  toast('Álbum apagado', 'error'); renderGroupsClean();
+}
 function showQRForLink(link) {
   const api = s => `https://api.qrserver.com/v1/create-qr-code/?size=${s}x${s}&margin=10&data=${encodeURIComponent(link)}`;
   const modal = document.createElement('div');
@@ -176,6 +357,21 @@ function showQRForLink(link) {
   document.body.appendChild(modal);
 }
 function groupQR(token) { showQRForLink(_groupLink(token)); }
+
+async function _sha256hex(str) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join('');
+}
+async function setGroupPassword(id) {
+  const pass = prompt('Senha do link do grupo (deixe VAZIO para remover):', '');
+  if (pass == null) return;
+  const clean = pass.trim();
+  const hash = clean ? await _sha256hex(clean) : null;
+  const { error } = await sb.from('gallery_groups').update({ password_hash: hash }).eq('id', id);
+  if (error) { toast('Erro: ' + error.message, 'error'); return; }
+  toast(hash ? 'Senha definida — só quem tiver a senha vê os álbuns' : 'Senha removida', 'success');
+  renderGroupsClean();
+}
 
 async function renameGroupClean(id) {
   const name = prompt('Novo nome do grupo:', '');

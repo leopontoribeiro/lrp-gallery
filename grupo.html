@@ -20,53 +20,62 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Barlow',sans-serif; background:#0d0d0d; color:#f0ece6; -webkit-font-smoothing:antialiased; }
 
-  .hero { position:relative; min-height:52vh; display:flex; align-items:flex-end;
-          background:#111 center/cover no-repeat; }
-  .hero::after { content:''; position:absolute; inset:0;
-                 background:linear-gradient(to top, rgba(0,0,0,.85), rgba(0,0,0,.25)); }
+  .hero { position:relative; min-height:52vh; display:flex; align-items:flex-end; background:#111 center/cover no-repeat; }
+  .hero::after { content:''; position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,.85), rgba(0,0,0,.25)); }
   .hero-inner { position:relative; z-index:1; padding:34px 26px; width:100%; max-width:1240px; margin:0 auto; }
-  .hero-kicker { font-family:'Barlow',sans-serif; font-size:.72rem; letter-spacing:.22em;
-                 text-transform:lowercase; color:#bdbdbd; text-decoration:none; }
-  .hero-kicker:hover { color:#FF6A00; }
-  .hero-title { font-family:'Oswald',sans-serif; font-weight:700; text-transform:uppercase;
-                font-size:clamp(1.9rem,5.5vw,3.6rem); line-height:1; letter-spacing:.01em;
-                margin-top:8px; color:#fff; text-shadow:0 2px 24px rgba(0,0,0,.4); }
+  .hero-kicker { font-family:'Barlow',sans-serif; font-size:.72rem; letter-spacing:.22em; text-transform:lowercase; color:#bdbdbd; }
+  .hero-title { font-family:'Oswald',sans-serif; font-weight:700; text-transform:uppercase; font-size:clamp(1.9rem,5.5vw,3.6rem); line-height:1; letter-spacing:.01em; margin-top:8px; color:#fff; text-shadow:0 2px 24px rgba(0,0,0,.4); word-break:keep-all; overflow-wrap:normal; max-width:100%; }
 
   .wrap { max-width:1240px; margin:0 auto; padding:30px 20px 20px; }
   .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); }
 
-  .album { display:block; text-decoration:none; color:inherit; background:#141414;
-           border:1px solid #232323; border-radius:12px; overflow:hidden;
-           transition:transform .18s ease, border-color .18s ease; }
+  .album { display:block; text-decoration:none; color:inherit; background:#141414; border:1px solid #232323; border-radius:12px; overflow:hidden; transition:transform .18s ease, border-color .18s ease; }
   .album:hover { transform:translateY(-4px); border-color:#FF6A00; }
   .album-cover { aspect-ratio:4/3; background:#1b1b1b; overflow:hidden; }
-  .album-cover img { width:100%; height:100%; object-fit:cover; display:block;
-                     opacity:0; transition:opacity .4s, transform .5s; }
+  .album-cover img { width:100%; height:100%; object-fit:cover; display:block; opacity:0; transition:opacity .4s, transform .5s; }
   .album-cover img.loaded { opacity:1; }
   .album:hover .album-cover img.loaded { transform:scale(1.05); }
   .album-body { padding:13px 14px 15px; }
-  .album-row { display:flex; flex-direction:column; gap:3px; }
-  .album-name { font-family:'Oswald',sans-serif; font-weight:600; text-transform:uppercase;
-                letter-spacing:.02em; font-size:.98rem; color:#fff; line-height:1.15;
-                white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .album-date { font-family:'Barlow',sans-serif; font-size:.49rem; color:#8a8a8a;
-                text-align:right; letter-spacing:.03em; }
+  .album-row { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .album-name { font-family:'Oswald',sans-serif; font-weight:600; text-transform:uppercase; letter-spacing:.02em; font-size:.98rem; color:#fff; line-height:1.15; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .album-date { font-family:'Barlow',sans-serif; font-size:.49rem; color:#8a8a8a; white-space:nowrap; flex-shrink:0; letter-spacing:.03em; }
   .album-meta { font-size:.72rem; color:#8a8a8a; margin-top:5px; }
 
   .empty,.loading { text-align:center; color:#8a8a8a; padding:60px 20px; font-size:.85rem; }
 
-  .brand { text-align:center; padding:40px 22px 46px; font-size:.74rem; color:#8a8a8a; line-height:1.9;
-           border-top:1px solid #1c1c1c; margin-top:24px; }
+  .brand { text-align:center; padding:40px 22px 46px; font-size:.74rem; color:#8a8a8a; line-height:1.9; border-top:1px solid #1c1c1c; margin-top:24px; }
   .brand .cred-link { color:#bdbdbd; text-decoration:none; }
   .brand .cred-link:hover { color:#FF6A00; }
   .brand a.another, .brand .another { font-family:Georgia,'Times New Roman',serif; color:#fff; font-weight:700; font-size:1rem; text-decoration:none; }
   .brand a.another:hover { color:#FF6A00; }
   .brand .another .dot { color:#e5352b; }
+
+  #pwgate { display:none; position:fixed; inset:0; background:#0d0d0d; z-index:50; align-items:center; justify-content:center; padding:24px; }
+  #pwgate .box { max-width:340px; width:100%; text-align:center; }
+  #pw-name { font-family:'Oswald',sans-serif; text-transform:uppercase; font-weight:600; color:#fff; font-size:1.15rem; letter-spacing:.04em; }
+  #pw-sub { color:#8a8a8a; font-size:.8rem; margin:10px 0 18px; }
+  #pw-input { width:100%; padding:13px 14px; background:#141414; border:1px solid #232323; border-radius:9px; color:#f0ece6; font-size:.95rem; outline:none; }
+  #pw-err { display:none; color:#ff8a8a; font-size:.74rem; margin-top:8px; }
+  #pw-btn { width:100%; margin-top:14px; padding:13px; background:#FF6A00; color:#0d0d0d; border:none; border-radius:9px; font-weight:700; font-size:.9rem; cursor:pointer; }
+
+  .video-card { cursor:pointer; }
+  .video-card .album-cover { position:relative; }
+  .video-card .same-day { display:flex; align-items:center; justify-content:center; width:100%; height:100%; background:#000; font-family:'Oswald',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.18em; font-size:1rem; color:#4a4a4a; }
+  .video-card .play-badge { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .video-card .play-badge svg { width:46px; height:46px; filter:drop-shadow(0 2px 8px rgba(0,0,0,.5)); }
+
+  #video-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.94); z-index:60; align-items:center; justify-content:center; padding:24px; }
+  #video-modal.open { display:flex; }
+  #video-modal .vm-box { max-width:900px; width:100%; text-align:center; }
+  #video-modal video { width:100%; max-height:74vh; border-radius:8px; background:#000; display:block; }
+  #video-modal .vm-actions { margin-top:16px; }
+  #video-modal .vm-dl { display:inline-block; padding:11px 22px; background:#FF6A00; color:#0d0d0d; border-radius:9px; font-weight:700; font-size:.85rem; text-decoration:none; }
+  #video-modal .vm-close { position:absolute; top:18px; right:22px; background:none; border:none; color:#fff; font-size:1.8rem; line-height:1; cursor:pointer; }
 </style>
 </head>
 <body>
   <div class="hero" id="hero"><div class="hero-inner">
-    <a class="hero-kicker" href="https://instagram.com/eusouleandroribeiro" target="_blank" rel="noopener">@eusouleandroribeiro</a>
+    <div class="hero-kicker">@eusouleandroribeiro</div>
     <h1 class="hero-title" id="grp-title">Álbuns</h1>
   </div></div>
   <div class="wrap">
@@ -80,57 +89,138 @@
     Direção criativa de Leandro Ribeiro.
   </div>
 
+  <div id="pwgate"><div class="box">
+    <div id="pw-name">Álbum protegido</div>
+    <div id="pw-sub">Digite a senha para ver os álbuns.</div>
+    <input id="pw-input" type="password" placeholder="Senha" onkeydown="if(event.key==='Enter')submitPw()">
+    <div id="pw-err">Senha incorreta</div>
+    <button id="pw-btn" onclick="submitPw()">Entrar</button>
+  </div></div>
+
+  <div id="video-modal">
+    <button class="vm-close" onclick="closeVideo()">✕</button>
+    <div class="vm-box">
+      <video id="vm-player" controls playsinline></video>
+      <div class="vm-actions"><a id="vm-download" class="vm-dl" download>Salvar vídeo</a></div>
+    </div>
+  </div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase-config.js"></script>
 <script>
 const sb = getSupabase();
+const TOKEN = new URLSearchParams(location.search).get('t');
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+async function sha256hex(str){ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str)); return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join(''); }
 
-async function init(){
-  const token = new URLSearchParams(location.search).get('t');
-  const loading = document.getElementById('loading');
-  const grid = document.getElementById('grid');
-  const empty = document.getElementById('empty');
-  if(!token){ loading.textContent = 'Link inválido.'; return; }
+// Encolhe o título até caber na largura do container, sem partir palavra
+// no meio (ex.: "@eusouleandroribeiro" inteiro numa linha). Ver gallery.html.
+function fitTitleText(el, minPx) {
+  if (!el) return;
+  minPx = minPx || 15;
+  el.style.fontSize = '';
+  let size = parseFloat(getComputedStyle(el).fontSize);
+  let guard = 0;
+  while (el.scrollWidth > el.clientWidth - 3 && size > minPx && guard < 60) {
+    size -= 1; el.style.fontSize = size + 'px'; guard++;
+  }
+}
+let _fitTitleResizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_fitTitleResizeTimer);
+  _fitTitleResizeTimer = setTimeout(() => fitTitleText(document.getElementById('grp-title')), 150);
+});
 
-  const { data, error } = await sb.rpc('get_public_group', { p_token: token });
-  if(error || !data || data.error){ loading.textContent = 'Álbum não encontrado ou indisponível.'; return; }
-
-  const name = data.name || 'Álbuns';
+function setHead(name, cover){
   document.title = `${name} · @eusouleandroribeiro`;
   document.getElementById('grp-title').textContent = name;
-  document.getElementById('og-title').content = `${name} · @eusouleandroribeiro`;
-  document.getElementById('tw-title').content = `${name} · @eusouleandroribeiro`;
-  document.getElementById('og-url').content = location.href;
-  if(data.cover){
-    document.getElementById('hero').style.backgroundImage = `url("${data.cover}")`;
-    document.getElementById('og-image').content = data.cover;
-    document.getElementById('tw-image').content = data.cover;
+  fitTitleText(document.getElementById('grp-title'));
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => fitTitleText(document.getElementById('grp-title')));
   }
-
-  const kids = Array.isArray(data.galleries) ? data.galleries : [];
-  loading.style.display = 'none';
-  if(kids.length === 0){ empty.style.display = 'block'; return; }
-
-  kids.forEach(g => {
-    const a = document.createElement('a');
-    a.className = 'album';
-    a.href = `gallery.html?t=${g.token}`;
-    a.innerHTML = `
-      <div class="album-cover">
-        ${g.cover ? `<img src="${g.cover}" alt="${esc(g.name)}" loading="lazy" onload="this.classList.add('loaded')">` : ''}
-      </div>
+  // og:site_name já mostra "@eusouleandroribeiro" — repetir aqui duplicava o nome no preview do WhatsApp.
+  document.getElementById('og-title').content = name;
+  document.getElementById('tw-title').content = name;
+  document.getElementById('og-url').content = location.href;
+  if(cover){ document.getElementById('hero').style.backgroundImage=`url("${cover}")`; document.getElementById('og-image').content=cover; document.getElementById('tw-image').content=cover; }
+}
+function renderAlbums(kids){
+  document.getElementById('loading').style.display='none';
+  document.getElementById('pwgate').style.display='none';
+  const grid=document.getElementById('grid'), empty=document.getElementById('empty');
+  grid.innerHTML='';
+  if(!kids.length){ empty.style.display='block'; return; }
+  empty.style.display='none';
+  kids.forEach(g=>{
+    const a=document.createElement('a'); a.className='album'; a.href=`gallery.html?t=${g.token}`;
+    a.innerHTML=`
+      <div class="album-cover">${g.cover?`<img src="${g.cover}" alt="${esc(g.name)}" loading="lazy" onload="this.classList.add('loaded')">`:''}</div>
       <div class="album-body">
-        <div class="album-row">
-          <span class="album-name">${esc(g.name)}</span>
-          <span class="album-date">${esc(g.date||'')}</span>
-        </div>
+        <div class="album-row"><span class="album-name">${esc(g.name)}</span><span class="album-date">${esc(g.date||'')}</span></div>
         <div class="album-meta">${g.count||0} fotos</div>
       </div>`;
     grid.appendChild(a);
   });
 }
-init();
+// Card do vídeo do evento — sempre aparece (preto "SAME DAY" se não tem vídeo
+// ainda), do mesmo tamanho/estilo dos cards de álbum. Fica sempre em primeiro.
+function renderVideoCard(data){
+  const grid = document.getElementById('grid');
+  const card = document.createElement('div');
+  card.className = 'album video-card';
+  if (data.video) {
+    card.innerHTML = `
+      <div class="album-cover">
+        ${data.video_thumb ? `<img src="${data.video_thumb}" alt="Vídeo do evento" loading="lazy" onload="this.classList.add('loaded')">` : ''}
+        <div class="play-badge"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.55)"/><path d="M10 8l6 4-6 4V8z" fill="#fff"/></svg></div>
+      </div>
+      <div class="album-body">
+        <div class="album-row"><span class="album-name">Vídeo do evento</span></div>
+        <div class="album-meta">Same Day</div>
+      </div>`;
+    card.onclick = () => openVideo(data.video, data.video_filename);
+  } else {
+    card.style.cursor = 'default';
+    card.innerHTML = `
+      <div class="album-cover"><div class="same-day">SAME DAY</div></div>
+      <div class="album-body"><div class="album-row"><span class="album-name" style="color:#555">Vídeo do evento</span></div></div>`;
+  }
+  grid.insertBefore(card, grid.firstChild);
+}
+function openVideo(url, filename){
+  const player = document.getElementById('vm-player');
+  player.src = url;
+  const dl = document.getElementById('vm-download');
+  dl.href = url; dl.download = filename || 'video.mp4';
+  document.getElementById('video-modal').classList.add('open');
+  player.play().catch(() => {});
+}
+function closeVideo(){
+  const player = document.getElementById('vm-player');
+  player.pause(); player.removeAttribute('src'); player.load();
+  document.getElementById('video-modal').classList.remove('open');
+}
+
+function showGate(name, wrong){
+  document.getElementById('loading').style.display='none';
+  if(name) document.getElementById('pw-name').textContent = name;
+  document.getElementById('pw-err').style.display = wrong ? 'block' : 'none';
+  document.getElementById('pwgate').style.display='flex';
+  document.getElementById('pw-input').focus();
+}
+async function load(hash){
+  const { data, error } = await sb.rpc('get_public_group', { p_token: TOKEN, p_pass_hash: hash||null });
+  if(error || !data || data.error){ document.getElementById('loading').textContent='Álbum não encontrado ou indisponível.'; return; }
+  setHead(data.name||'Álbuns', data.cover);
+  if(data.locked){ showGate(data.name, !!hash); return; }
+  renderAlbums(Array.isArray(data.galleries)?data.galleries:[]);
+  renderVideoCard(data);
+}
+async function submitPw(){
+  const v=document.getElementById('pw-input').value; if(!v) return;
+  await load(await sha256hex(v));
+}
+if(!TOKEN){ document.getElementById('loading').textContent='Link inválido.'; } else { load(null); }
 </script>
 </body>
 </html>

@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=DM+Mono:wght@300;400&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="admin-login.js"></script>
-<script src="sentry-config.js"></script>
 <style>
 :root {
   --bg: #0d0d0d;
@@ -1051,6 +1050,10 @@ body {
         <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><circle cx="9" cy="7" r="2.5" fill="none"/><circle cx="15" cy="7" r="4"/><circle cx="15" cy="7" r="2.5" fill="none"/><path d="M9 11v3c0 2.21-1.79 4-4 4H5c-2.21 0-4-1.79-4-4v-3M15 11v3c0 2.21 1.79 4 4 4h0c2.21 0 4-1.79 4-4v-3"/></svg>
         Grupos de Galerias
       </button>
+      <button class="nav-item" id="nav-bulk" onclick="goTo('bulk')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="13" height="13" rx="2"/><path d="M8 21h10a2 2 0 002-2V9"/></svg>
+        Processar em Lote
+      </button>
 
       <span class="nav-label">Sistema</span>
       <button class="nav-item" id="nav-analytics" onclick="goTo('analytics')">
@@ -1176,6 +1179,21 @@ body {
             <div class="upload-list" id="upload-list"></div>
           </div>
 
+          <div class="form-group">
+            <label class="form-label">Foto de capa (opcional)</label>
+            <div class="upload-zone" id="cover-zone" style="padding:20px 24px">
+              <input type="file" id="cover-file-input" accept="image/*" onchange="handleCoverFile(this.files[0])">
+              <div id="cover-zone-empty">
+                <svg class="upload-icon" viewBox="0 0 24 24" style="width:26px;height:26px;margin-bottom:8px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <div class="upload-sub">Solte a capa aqui ou clique para selecionar — se não escolher, a 1ª foto do álbum vira a capa</div>
+              </div>
+              <div id="cover-zone-preview" style="display:none;position:relative;z-index:2">
+                <img id="cover-preview-img" style="max-width:100%;max-height:140px;border-radius:6px;object-fit:cover;display:block;margin:0 auto 8px">
+                <button type="button" onclick="event.stopPropagation();clearCoverFile()" style="position:relative;z-index:3;background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:0.65rem;cursor:pointer">Remover capa</button>
+              </div>
+            </div>
+          </div>
+
           <div style="display:flex;gap:10px;margin-top:8px">
             <button class="btn btn-primary" onclick="createGallery()">
               <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1214,8 +1232,20 @@ body {
           </div>
         </div>
 
+        <!-- Senha fica junto do link que o cliente recebe: é a decisão que
+             acompanha o envio, não um ajuste escondido em outra aba. -->
         <div class="link-box">
-          <span class="link-box-label">Link do cliente</span>
+          <span class="link-box-label">Senha do álbum</span>
+          <span class="link-box-url" id="detail-pw-status" style="flex:1">—</span>
+          <input type="text" id="detail-pw-input" placeholder="Digite a senha"
+                 style="flex:1;min-width:120px;padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.75rem;outline:none"
+                 onkeydown="if(event.key==='Enter')saveDetailPassword()">
+          <button class="btn btn-ghost" onclick="saveDetailPassword()">Salvar</button>
+          <button class="btn btn-ghost" id="detail-pw-clear" style="display:none" onclick="clearDetailPassword()">Remover</button>
+        </div>
+
+        <div class="link-box">
+          <span class="link-box-label">Link para o Gallery</span>
           <span class="link-box-url" id="detail-link">—</span>
           <button class="btn btn-ghost" onclick="copyLink()">
             <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
@@ -1225,6 +1255,39 @@ body {
             <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
             QR Code
           </button>
+        </div>
+
+        <div class="link-box">
+          <span class="link-box-label">Link fotos em alta</span>
+          <span class="link-box-url" id="detail-link-hi">— não definido —</span>
+          <button class="btn btn-ghost" onclick="setResLink('high')">Substituir</button>
+          <button class="btn btn-ghost" id="detail-link-hi-qr" style="display:none" onclick="showQRForLink(document.getElementById('detail-link-hi').textContent)">QR Code</button>
+          <button class="btn btn-ghost" id="detail-link-hi-del" style="display:none" onclick="clearResLink('high')">Apagar</button>
+        </div>
+
+        <div class="link-box">
+          <span class="link-box-label">Link fotos em baixa</span>
+          <span class="link-box-url" id="detail-link-lo">— não definido —</span>
+          <button class="btn btn-ghost" onclick="setResLink('low')">Substituir</button>
+          <button class="btn btn-ghost" id="detail-link-lo-qr" style="display:none" onclick="showQRForLink(document.getElementById('detail-link-lo').textContent)">QR Code</button>
+          <button class="btn btn-ghost" id="detail-link-lo-del" style="display:none" onclick="clearResLink('low')">Apagar</button>
+        </div>
+
+        <!-- Modal Pessoas (agrupamento de rostos) -->
+        <div id="people-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.8);align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closePeople()">
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:14px;width:100%;max-width:960px;max-height:88vh;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+              <div style="flex:1;min-width:180px">
+                <div style="font-weight:700;color:var(--text)">Pessoas identificadas</div>
+                <div style="font-size:.68rem;color:var(--muted);margin-top:2px">Dê um nome e vira grupo em todas as fotos dela. Nomes iguais juntam os grupos.</div>
+              </div>
+              <label style="display:flex;align-items:center;gap:6px;font-size:.68rem;color:var(--muted);cursor:pointer">
+                <input type="checkbox" id="people-singles" onchange="togglePeopleSingles()"> mostrar quem aparece 1x
+              </label>
+              <button class="btn btn-ghost" onclick="closePeople()">Fechar</button>
+            </div>
+            <div id="people-body" style="padding:18px 20px;overflow-y:auto"></div>
+          </div>
         </div>
 
         <!-- Modal QR -->
@@ -1252,17 +1315,55 @@ body {
               <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Adicionar fotos
             </label>
+            <label class="btn btn-ghost" style="cursor:pointer" title="Enviar uma foto nova e definir como capa da galeria">
+              <input type="file" accept="image/*" style="display:none" onchange="addCoverToDetail(this.files[0])">
+              <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="14" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              Adicionar capa
+            </label>
+            <button class="btn btn-ghost" onclick="removeDuplicatePhotos()" title="Apaga fotos com nome repetido, mantendo só 1">
+              <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+              Apagar duplicados
+            </button>
+            <label class="btn btn-ghost" style="cursor:pointer" title="Vídeos desta galeria (aparecem como cards, separados das fotos)">
+              <input type="file" multiple accept="video/*" style="display:none" onchange="addVideosToDetail(this.files)">
+              <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="5" width="15" height="14" rx="2"/><path d="M17 10l5-3v10l-5-3"/></svg>
+              Adicionar vídeos
+            </label>
+            <button class="btn btn-ghost" id="detail-faces-btn" onclick="indexCurrentGalleryFaces()" title="Procura rostos em todas as fotos desta galeria (roda neste navegador)">
+              <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="9.5" cy="10" r="1"/><circle cx="14.5" cy="10" r="1"/><path d="M9 15c.8.8 1.9 1.2 3 1.2s2.2-.4 3-1.2"/></svg>
+              <span id="detail-faces-label">Escanear rostos</span>
+            </button>
+            <button class="btn btn-ghost" onclick="openPeople()" title="Agrupa os rostos por pessoa e transforma em grupos com o nome que você der">
+              <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+              Pessoas
+            </button>
           </div>
         </div>
+
+        <div id="detail-faces-bar" style="display:none;margin-bottom:14px">
+          <div style="font-size:.7rem;color:var(--muted);margin-bottom:6px" id="detail-faces-status">—</div>
+          <div style="height:5px;background:var(--panel2);border-radius:3px;overflow:hidden">
+            <div id="detail-faces-fill" style="height:100%;width:0;background:var(--accent);transition:width .2s"></div>
+          </div>
+        </div>
+
+        <div class="upload-list" id="detail-upload-list"></div>
+        <div class="video-cards" id="detail-videos" style="display:none;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:18px"></div>
 
         <!-- Barra de grupos (modo seleção) -->
         <div id="group-bar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px">
           <span id="group-sel-count" style="font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted)">0 SELECIONADAS</span>
+          <button class="btn btn-ghost" id="group-select-all" onclick="toggleSelectAllPhotos()" style="padding:8px 14px;font-size:0.65rem">Selecionar todas</button>
           <input id="group-name-input" list="group-names" placeholder="Nome do grupo (ex: Cerimônia)"
                  style="flex:1;min-width:180px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:0.78rem;outline:none">
           <datalist id="group-names"></datalist>
           <button class="btn btn-primary" onclick="applyGroup()" style="padding:8px 14px;font-size:0.65rem">Aplicar grupo</button>
           <button class="btn btn-ghost" onclick="applyGroup(true)" style="padding:8px 14px;font-size:0.65rem">Remover grupo</button>
+          <button class="btn btn-ghost" onclick="renamePhotoGroup()" style="padding:8px 14px;font-size:0.65rem" title="Digite o nome do grupo no campo e clique aqui para renomear em todas as fotos dele">Renomear grupo</button>
+          <span style="width:1px;height:20px;background:var(--border)"></span>
+          <button class="btn btn-ghost" onclick="renameSelectedPhotos()" style="padding:8px 14px;font-size:0.65rem">Renomear selecionadas</button>
+          <button class="btn btn-ghost" onclick="renameAllPhotos()" style="padding:8px 14px;font-size:0.65rem">Renomear todas</button>
+          <button class="btn btn-danger" onclick="deleteSelectedPhotos()" style="padding:8px 14px;font-size:0.65rem">Apagar selecionadas</button>
           <button class="btn btn-ghost" onclick="toggleGroupMode()" style="padding:8px 14px;font-size:0.65rem">Concluir</button>
         </div>
 
@@ -1364,7 +1465,11 @@ body {
             <button class="btn btn-ghost" id="mfa-remove-btn" onclick="removeMfaFactor()" style="display:none">Remover 2FA</button>
           </div>
           <div id="mfa-enroll-box" style="display:none;margin-top:14px">
-            <div id="mfa-qr" style="width:180px;height:180px;background:#fff;padding:8px;border-radius:8px"></div>
+            <div id="mfa-qr" style="width:230px;height:230px;background:#fff;padding:12px;border-radius:10px;overflow:hidden;box-sizing:border-box;margin:0 auto"></div>
+            <div style="display:none;text-align:center;margin-top:10px">
+              <div style="font-size:.62rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">Ou digite esta chave no app</div>
+              <code id="mfa-secret" style="display:inline-block;margin-top:4px;font-family:var(--mono);font-size:.78rem;color:var(--accent);word-break:break-all;user-select:all"></code>
+            </div>
             <div class="form-group" style="margin-top:10px;max-width:200px">
               <label class="form-label">Código do app</label>
               <input type="text" class="form-input" id="mfa-code" placeholder="000000" maxlength="6" inputmode="numeric">
@@ -1376,6 +1481,17 @@ body {
         <div class="settings-group" style="max-width:560px;margin-bottom:24px">
           <div class="settings-group-title">Últimas ações (auditoria)</div>
           <div id="audit-log-list" style="font-size:0.72rem;color:var(--muted)">Carregando…</div>
+        </div>
+
+        <div class="settings-group" style="max-width:560px;margin-bottom:24px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <div class="settings-group-title" style="margin:0">Erros recentes</div>
+            <button class="btn btn-ghost" style="padding:6px 12px;font-size:.65rem" onclick="refreshErrorLog()">Atualizar</button>
+          </div>
+          <div class="toggle-desc" style="margin:6px 0 10px">
+            Erros que aconteceram no navegador seu ou dos clientes. Vazio é bom sinal.
+          </div>
+          <div id="error-log-list" style="font-size:0.72rem;color:var(--muted)">Carregando…</div>
         </div>
 
         <div id="settings-form" style="display:none; max-width:560px">
@@ -1563,6 +1679,66 @@ body {
         <div id="gallery-groups-container"></div>
       </div>
 
+      <!-- ── PROCESSAR EM LOTE ── -->
+      <div class="screen" id="screen-bulk">
+        <div class="form-section" style="max-width:640px">
+          <div style="color:var(--muted);font-size:.78rem;margin-bottom:18px;line-height:1.6">
+            Converte até ~1500 fotos de tamanhos/formatos diferentes pra JPEG dentro de um teto de tamanho,
+            renomeando tudo em sequência. Roda aqui no navegador — pra lotes muito grandes numa máquina fraca,
+            pode demorar; a aba precisa ficar aberta até terminar.
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nome-base (vira o nome da galeria e o prefixo dos arquivos)</label>
+            <input type="text" class="form-input" id="bulk-name" placeholder="Ex: Casamento Ana e João">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tamanho máximo por foto (MB)</label>
+            <input type="number" class="form-input" id="bulk-max-mb" value="1.5" min="1.2" max="2" step="0.1" style="max-width:120px">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Destino</label>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+              <label style="display:flex;align-items:center;gap:8px;color:var(--text);font-size:.8rem;cursor:pointer">
+                <input type="radio" name="bulk-dest" value="gallery" checked style="accent-color:var(--accent)">
+                Criar uma galeria nova e subir direto
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;color:var(--text);font-size:.8rem;cursor:pointer">
+                <input type="radio" name="bulk-dest" value="zip" style="accent-color:var(--accent)">
+                Baixar tudo como .zip (não recomendado acima de ~300 fotos — usa memória do navegador)
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Fotos (selecione a pasta inteira)</label>
+            <div class="upload-zone" id="bulk-zone">
+              <input type="file" id="bulk-file-input" multiple webkitdirectory directory onchange="handleBulkFolder(this.files)">
+              <svg class="upload-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div class="upload-title">Clique para escolher a pasta</div>
+              <div class="upload-sub">ou solte os arquivos aqui · JPG, PNG, WEBP, GIF, TIFF, BMP, AVIF · não lê .heic/.heif</div>
+            </div>
+            <div id="bulk-file-count" style="font-size:.72rem;color:var(--muted);margin-top:8px"></div>
+          </div>
+
+          <div id="bulk-progress-wrap" style="display:none;margin-top:8px">
+            <div class="upload-progress-bar" style="width:100%;height:6px">
+              <div class="upload-progress-fill" id="bulk-progress-fill" style="width:0%"></div>
+            </div>
+            <div id="bulk-progress-text" style="font-size:.68rem;color:var(--muted);margin-top:6px;font-family:var(--mono)"></div>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:18px">
+            <button class="btn btn-primary" id="bulk-start-btn" onclick="startBulkProcess()" disabled>
+              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              Processar
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- LGPD ANALYTICS (TASK #22) -->
       <div id="lgpd-analytics"></div>
 
@@ -1625,6 +1801,7 @@ body {
     <div id="confirm-msg"></div>
     <div id="confirm-actions">
       <button class="btn btn-ghost" id="confirm-cancel">Cancelar</button>
+      <button class="btn btn-ghost" id="confirm-extra" style="display:none">Substituir todas</button>
       <button class="btn btn-danger" id="confirm-ok">Excluir</button>
     </div>
   </div>
@@ -1635,16 +1812,18 @@ body {
 <script src="supabase-config.js"></script>
 <script src="gallery-utils.js"></script>
 <script src="admin-facial-index.js"></script>
+<script src="admin-people.js"></script>
 <script src="admin-backup.js"></script>
 <script src="admin-qr.js"></script>
 <script src="admin-analytics.js"></script>
 <script src="admin-galleries.js"></script>
 <script src="admin-detail.js"></script>
 <script src="admin-groups-clean.js"></script>
+<script src="admin-gallery-videos.js"></script>
+<script src="admin-bulk.js"></script>
 <script>
 // ── SUPABASE ──
 const sb = getSupabase();
-const BUCKET = 'gallery-photos';
 const BASE_URL = 'https://www.souleandroribeiro.com.br/gallery';
 const ADMIN_EMAIL = 'souleandroribeiro@gmail.com';
 
@@ -1671,9 +1850,12 @@ async function signUrls(urls) {
   if (!urls?.length) return urls;
   try {
     const { data, error } = await sb.rpc('sign_urls', { p_urls: urls.map(u => u || '') });
-    if (error || !Array.isArray(data)) return urls;
+    if (error || !Array.isArray(data)) {
+      console.error('signUrls: RPC falhou, usando URLs sem assinatura (vão ser rejeitadas pelo worker):', error || 'data não é array', data);
+      return urls;
+    }
     return urls.map((u, i) => data[i] || u);
-  } catch (e) { return urls; }
+  } catch (e) { console.error('signUrls: exceção', e); return urls; }
 }
 // Assina thumb_url e full_url de um array de fotos (in-place).
 async function signPhotos(photos) {
@@ -1777,6 +1959,39 @@ async function refreshMfaStatus() {
   document.getElementById('mfa-enroll-box').style.display = 'none';
 }
 
+// Erros registrados pelo reportError (deste arquivo e do gallery.html) na
+// tabela client_errors. Antes existia um sentry-config.js que baixava o SDK
+// do Sentry com DSN de exemplo, ligava Session Replay e ainda sobrescrevia
+// window.supabase.from — removido: mandava tudo pra lugar nenhum.
+async function refreshErrorLog() {
+  const el = document.getElementById('error-log-list');
+  if (!el) return;
+  el.textContent = 'Carregando…';
+  const { data, error } = await sb.from('client_errors')
+    .select('created_at,page,message,detail,ua').order('created_at', { ascending: false }).limit(25);
+  if (error) { el.textContent = 'Não foi possível ler os erros: ' + error.message; return; }
+  if (!data || !data.length) { el.innerHTML = '<span style="color:var(--green)">Nenhum erro registrado.</span>'; return; }
+
+  // Agrupa por mensagem: 40x o mesmo erro é 1 problema, não 40.
+  const byMsg = new Map();
+  for (const r of data) {
+    const k = r.page + ' · ' + r.message;
+    if (!byMsg.has(k)) byMsg.set(k, { n: 0, last: r.created_at, r });
+    const g = byMsg.get(k); g.n++;
+    if (r.created_at > g.last) g.last = r.created_at;
+  }
+  el.innerHTML = [...byMsg.values()]
+    .sort((a, b) => (b.last > a.last ? 1 : -1))
+    .map(g => {
+      const d = new Date(g.last).toLocaleString('pt-BR');
+      const mob = /iPhone|Android|iPad/i.test(g.r.ua || '') ? ' · celular' : '';
+      return `<div style="padding:7px 0;border-bottom:1px solid var(--border)">
+        <div style="color:var(--red)">${esc(g.r.message)}${g.n > 1 ? ` <span style="color:var(--muted)">(${g.n}x)</span>` : ''}</div>
+        <div style="color:var(--muted);font-size:.66rem;margin-top:2px">${esc(g.r.page)} · ${d}${mob}${g.r.detail ? ' · ' + esc(String(g.r.detail).slice(0, 90)) : ''}</div>
+      </div>`;
+    }).join('');
+}
+
 async function refreshAuditLog() {
   const el = document.getElementById('audit-log-list');
   const { data, error } = await sb.from('admin_actions').select('*').order('created_at', { ascending: false }).limit(20);
@@ -1791,19 +2006,88 @@ async function refreshAuditLog() {
 
 let _mfaEnrollFactorId = null;
 async function startMfaEnroll() {
-  const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp' });
-  if (error) { toast('Erro ao iniciar 2FA: ' + error.message, 'error'); return; }
+  const btn = document.getElementById('mfa-enroll-btn');
+  if (btn) btn.disabled = true;
+  const st = document.getElementById('mfa-status');
+  try {
+    // Toda tentativa que não chega ao fim deixa um fator 'unverified' pendurado,
+    // e o Supabase recusa um enroll novo enquanto ele existir ("factor already
+    // exists"). Limpa os pendentes antes de começar — os verificados ficam.
+    try {
+      const { data: fs } = await sb.auth.mfa.listFactors();
+      const todos = [...((fs && fs.all) || []), ...((fs && fs.totp) || [])];
+      const vistos = new Set();
+      for (const f of todos) {
+        if (!f || !f.id || vistos.has(f.id) || f.status === 'verified') continue;
+        vistos.add(f.id);
+        await sb.auth.mfa.unenroll({ factorId: f.id }).catch(() => {});
+      }
+    } catch (e) { console.warn('limpeza de fatores pendentes:', e); }
+
+  const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Painel ' + Date.now() });
+  if (error) {
+    console.error('mfa.enroll falhou:', error);
+    if (st) st.textContent = 'Erro ao iniciar 2FA: ' + error.message;
+    toast('Erro ao iniciar 2FA: ' + error.message, 'error');
+    return;
+  }
   _mfaEnrollFactorId = data.id;
-  document.getElementById('mfa-qr').innerHTML = data.totp.qr_code;
+  const qrBox = document.getElementById('mfa-qr');
+  const qr = (data.totp && data.totp.qr_code) || '';
+  qrBox.innerHTML = '';
+
+  // O Supabase às vezes devolve o QR como data URI (imagem) e às vezes como
+  // SVG cru. Antes injetávamos sempre como HTML: quando vinha data URI virava
+  // texto na tela e não dava pra fotografar.
+  if (/^(data:|https?:)/i.test(qr.trim())) {
+    const img = new Image();
+    img.src = qr.trim();
+    img.alt = 'QR Code do 2FA';
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block';
+    qrBox.appendChild(img);
+  } else if (qr.includes('<svg')) {
+    qrBox.innerHTML = qr;
+    const svg = qrBox.querySelector('svg');
+    if (svg) {
+      svg.removeAttribute('width'); svg.removeAttribute('height');
+      svg.style.cssText = 'width:100%;height:100%;display:block';
+    }
+  }
+
+  // Chave manual: se a câmera não pegar o QR, dá pra digitar no app.
+  const secret = (data.totp && data.totp.secret) || '';
+  const el = document.getElementById('mfa-secret');
+  if (el) {
+    el.textContent = secret;
+    el.parentElement.style.display = secret ? 'block' : 'none';
+  }
+
   document.getElementById('mfa-code').value = '';
   document.getElementById('mfa-enroll-box').style.display = 'block';
+  } catch (e) {
+    console.error('startMfaEnroll:', e);
+    if (st) st.textContent = 'Falha ao preparar o 2FA: ' + (e.message || e);
+    toast('Falha ao preparar o 2FA: ' + (e.message || e), 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 async function confirmMfaEnroll() {
   const code = document.getElementById('mfa-code').value.trim();
   if (!/^\d{6}$/.test(code)) { toast('Digite os 6 dígitos do app autenticador', 'error'); return; }
+  if (!_mfaEnrollFactorId) { toast('Clique em "Ativar 2FA" primeiro', 'error'); return; }
   const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: _mfaEnrollFactorId, code });
-  if (error) { toast('Código inválido', 'error'); return; }
+  if (error) {
+    // "Código inválido" seco escondia causas comuns: relógio do celular fora de
+    // hora, QR de uma tentativa antiga, ou código já expirado (valem 30s).
+    console.error('mfa.challengeAndVerify:', error);
+    const m = /expired|invalid/i.test(error.message || '')
+      ? 'Código não aceito. Confira se o relógio do celular está automático e use o código do momento (muda a cada 30s).'
+      : 'Erro ao validar: ' + error.message;
+    toast(m, 'error');
+    return;
+  }
   logAdminAction('mfa_enrolled', {});
   toast('2FA ativada!', 'success');
   refreshMfaStatus();
@@ -1850,7 +2134,9 @@ sb.auth.onAuthStateChange(async (event, session) => {
 // ── STATE ──
 let galleries = [];
 let currentGalleryId = null;
+let currentGalleryGroupId = null;
 let pendingFiles = [];
+let pendingCoverFile = null;
 let currentGalleryCoverPhotoId = null;
 let coverEditorPhotoId = null;
 let coverEditorPosX = 50;
@@ -1863,6 +2149,7 @@ const SCREENS = {
   new:       { title: 'Nova Galeria',   nav: 'nav-new'       },
   detail:    { title: 'Galeria',        nav: null            },
   groups:    { title: 'Grupos de Galerias', nav: 'nav-groups' },
+  bulk:      { title: 'Processar em Lote', nav: 'nav-bulk'   },
   analytics: { title: 'Analytics',      nav: 'nav-analytics' },
   selections:{ title: 'Seleções',       nav: 'nav-selections'},
   sales:     { title: 'Vendas',         nav: 'nav-sales'     },
@@ -1880,7 +2167,8 @@ function goTo(screen) {
 
   const actions = document.getElementById('topbar-actions');
   if(screen === 'detail') {
-    actions.innerHTML = `<button class="btn btn-ghost" onclick="goTo('dashboard')">
+    const backAction = currentGalleryGroupId ? `manageGroup('${currentGalleryGroupId}')` : "goTo('dashboard')";
+    actions.innerHTML = `<button class="btn btn-ghost" onclick="${backAction}">
       <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
       Voltar
     </button>`;
@@ -1896,6 +2184,7 @@ function goTo(screen) {
   if(screen === 'dashboard') renderDashboard();
   if(screen === 'new')       resetNewForm();
   if(screen === 'groups')    initGalleryGroups();
+  if(screen === 'bulk')      resetBulkForm();
   if(screen === 'analytics') initAnalyticsScreen();
   if(screen === 'selections')initSelectionsScreen();
   if(screen === 'sales')     initSalesScreen();
@@ -1915,6 +2204,24 @@ zone.addEventListener('drop', e => {
   e.preventDefault();
   zone.classList.remove('drag-over');
   handleFiles(e.dataTransfer.files);
+});
+
+const coverZone = document.getElementById('cover-zone');
+coverZone.addEventListener('dragover', e => { e.preventDefault(); coverZone.classList.add('drag-over'); });
+coverZone.addEventListener('dragleave', () => coverZone.classList.remove('drag-over'));
+coverZone.addEventListener('drop', e => {
+  e.preventDefault();
+  coverZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) handleCoverFile(e.dataTransfer.files[0]);
+});
+
+const bulkZone = document.getElementById('bulk-zone');
+bulkZone.addEventListener('dragover', e => { e.preventDefault(); bulkZone.classList.add('drag-over'); });
+bulkZone.addEventListener('dragleave', () => bulkZone.classList.remove('drag-over'));
+bulkZone.addEventListener('drop', e => {
+  e.preventDefault();
+  bulkZone.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) handleBulkFolder(e.dataTransfer.files);
 });
 
 // toast() vem de gallery-utils.js

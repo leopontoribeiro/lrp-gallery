@@ -1235,6 +1235,7 @@ body.bg-dark       .color-swatch.active { border-color: #e8ff47 !important; tran
     <button class="drawer-item" id="drawer-buy" style="display:none" onclick="buyFavorites(); closeDrawer()">Comprar originais (favoritas)</button>
     <button class="drawer-item" id="drawer-buydl" style="display:none" onclick="downloadPurchased(); closeDrawer()">Baixar meus originais comprados</button>
     <button class="drawer-item" id="drawer-code" style="display:none" onclick="enterUnlockCode(); closeDrawer()">Tenho um código de desbloqueio</button>
+    <button class="drawer-item" id="drawer-recover" style="display:none" onclick="recuperarCompra(); closeDrawer()">Já comprei e perdi o código</button>
     <div class="drawer-divider"></div>
     <button class="drawer-item" onclick="openStorageModal(); closeDrawer()">Guardar esta galeria para sempre</button>
     <button class="drawer-item" id="drawer-add-video" style="display:none" onclick="pickClientVideo(); closeDrawer()">Adicionar meu vídeo</button>
@@ -1273,7 +1274,7 @@ function _fmtDur(sec) {
 }
 async function loadClientVideos(token) {
   try {
-    const { data, error } = await sb.rpc('get_public_gallery_videos', { p_token: token });
+    const { data, error } = await sb.rpc('get_public_gallery_videos', { p_token: token, p_pw: window._pwHash || null });
     if (error || !Array.isArray(data) || !data.length) return;
     const row = document.getElementById('video-row');
     row.style.display = 'flex';
@@ -1389,7 +1390,8 @@ async function getFullUrlOnDemand(photoId) {
       p_token: _galleryToken,
       p_photo_id: photoId,
       p_visitor: visitor,
-      p_codes: codes
+      p_codes: codes,
+      p_pw: window._pwHash || null
     });
     return (error || !data) ? null : data;
   } catch (e) { return null; }
@@ -1406,19 +1408,21 @@ async function init() {
     _galleryToken = token;
     // 1º tenta a RPC segura (get_public_gallery). Se ainda não existir no banco
     // (schema antigo), cai no SELECT direto — comportamento idêntico ao anterior.
+    // Só existe UM caminho: a RPC segura. O antigo plano B lia a tabela direto,
+    // o que deixou de funcionar quando fechamos o acesso anônimo — e, pior,
+    // falhava calado: o cliente via uma galeria vazia sem nenhuma explicação.
+    // Agora, se a RPC falhar, ele vê uma mensagem e você recebe o erro.
     let data = null, error = null, usingRpc = false;
     {
       const rpc = await sb.rpc('get_public_gallery', { p_token: token || null, p_slug: slug || null });
       if (!rpc.error && Array.isArray(rpc.data) && rpc.data.length) {
         data = rpc.data[0]; usingRpc = true;
+      } else if (rpc.error) {
+        reportError('gallery-load', rpc.error.message);
+        showFatalGate('NÃO CONSEGUIMOS ABRIR', 'Houve uma falha ao carregar este álbum.<br>Tente recarregar a página em alguns instantes.');
+        return;
       } else {
-        let q = sb.from('galleries')
-          .select('id, name, slug, status, cover_photo_id, cover_position_x, cover_position_y, password_hash, expires_at, download_enabled')
-          .eq('status', 'live');
-        q = token ? q.eq('access_token', token).single()
-          : slug ? q.eq('slug', slug).single()
-                 : q.order('created_at', { ascending: false }).limit(1).single();
-        const res = await q; data = res.data; error = res.error;
+        error = { message: 'not_found' };
       }
     }
     _usingRpc = usingRpc;
@@ -1433,9 +1437,10 @@ async function init() {
       }
 
       // Verifica senha (RPC: has_password | fallback: password_hash)
-      const hasPw = usingRpc ? data.has_password : !!data.password_hash;
+      // O hash correto nunca vem para o navegador — só o booleano.
+      const hasPw = !!data.has_password;
       if (hasPw) {
-        const ok = await showPasswordGate(usingRpc ? null : data.password_hash, data.name, token);
+        const ok = await showPasswordGate(null, data.name, token);
         if (!ok) return;
       }
 
@@ -1443,11 +1448,13 @@ async function init() {
       coverPhotoId    = data.cover_photo_id || null;
       downloadEnabled = data.download_enabled !== false;
       galleryName     = data.name || '';
-      galleryPrice    = usingRpc ? (data.price_cents || 0) : 0;
-      paywallEnabled  = usingRpc ? (data.paywall_enabled === true) : false;
-      facialRecognitionEnabled = usingRpc ? (data.facial_recognition_enabled !== false) : true;
-      fullUrlDeliveryDisabled  = usingRpc ? (data.full_url_delivery_disabled === true) : false;
-      _paywall        = !!(usingRpc && paywallEnabled && galleryPrice > 0);
+      // usingRpc é sempre true aqui: sem RPC não há 'data' (o caminho antigo,
+      // que lia a tabela direto, foi removido). Os ternários viravam ruído.
+      galleryPrice    = data.price_cents || 0;
+      paywallEnabled  = data.paywall_enabled === true;
+      facialRecognitionEnabled = data.facial_recognition_enabled !== false;
+      fullUrlDeliveryDisabled  = data.full_url_delivery_disabled === true;
+      _paywall        = !!(paywallEnabled && galleryPrice > 0);
       updatePaywallUI(); refreshPurchases(); handlePaidReturn(params);
 
       const hiBtn = document.getElementById('res-btn-hi'), loBtn = document.getElementById('res-btn-lo');
@@ -1480,30 +1487,13 @@ async function init() {
       let pageSize = 500;
 
       // Total esperado — usado para detectar carga incompleta
-      let expectedCount;
-      if (usingRpc) {
-        const r = await sb.rpc('get_public_photo_count', { p_token: token });
-        expectedCount = r.error ? null : r.data;
-      } else {
-        const { count } = await sb.from('photos')
-          .select('*', { count: 'exact', head: true }).eq('gallery_id', data.id);
-        expectedCount = count;
-      }
+      const _rc = await sb.rpc('get_public_photo_count', { p_token: token, p_pw: window._pwHash || null });
+      const expectedCount = _rc.error ? null : _rc.data;
 
       const fetchPage = async (page) => {
         for (let attempt = 0; attempt < 3; attempt++) {
-          let rows, err;
-          if (usingRpc) {
-            const r = await sb.rpc('get_public_photos', { p_token: token, p_offset: page * pageSize, p_limit: pageSize });
-            rows = r.data; err = r.error;
-          } else {
-            const r = await sb.from('photos')
-              .select('id, filename, thumb_url, full_url, position, width, height, group_name')
-              .eq('gallery_id', data.id)
-              .order('position', { ascending: true })
-              .range(page * pageSize, (page + 1) * pageSize - 1);
-            rows = r.data; err = r.error;
-          }
+          const r = await sb.rpc('get_public_photos', { p_token: token, p_offset: page * pageSize, p_limit: pageSize, p_pw: window._pwHash || null });
+          const rows = r.data, err = r.error;
           if (!err) return rows || [];
           await new Promise(r => setTimeout(r, 400 * (attempt + 1))); // backoff
         }
@@ -1524,6 +1514,14 @@ async function init() {
       // Se veio menos do que o esperado, avisa em vez de mostrar galeria incompleta em silêncio
       if ((loadError || (expectedCount && allPhotos.length < expectedCount)) && allPhotos.length > 0) {
         toast(`Carregadas ${allPhotos.length} de ${expectedCount} fotos — recarregue se faltar alguma`);
+      }
+      // Zero fotos quando o servidor diz que existem: falha real. Antes isso
+      // virava uma galeria em branco, sem erro nenhum na tela nem no log.
+      if (allPhotos.length === 0 && (loadError || expectedCount > 0)) {
+        reportError('gallery-empty', `esperava ${expectedCount}, carregou 0`);
+        showFatalGate('NÃO CONSEGUIMOS CARREGAR AS FOTOS',
+          'O álbum existe, mas as fotos não vieram.<br>Tente recarregar a página. Se continuar, avise o fotógrafo.');
+        return;
       }
       // Ordena da primeira foto até a última pela numeração do nome do arquivo
       // (ordenação natural: DSC_2 antes de DSC_10). Garante sequência correta

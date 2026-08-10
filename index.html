@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Souleandro Ribeiro — Criativo & Desenvolvedor</title>
+<title>Souleandro Ribeiro — Fotógrafo, Criativo & Empreendedor</title>
 <meta property="og:type" content="website">
 <meta property="og:title" content="Souleandro Ribeiro">
-<meta property="og:description" content="Portfólio de projetos: Gallery, Origon e Mateu Coffee">
+<meta property="og:description" content="Portfólio de projetos: Origon, LRP Gallery e Mateu Coffee">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Archivo+Black&display=swap" rel="stylesheet">
@@ -24,25 +24,42 @@
 
   header {
     text-align: center;
-    padding: 60px 24px 40px;
+    padding: 48px 24px 40px;
   }
 
-  header h1 {
-    font-family: 'Archivo Black', sans-serif;
-    font-size: 2.5rem;
-    letter-spacing: 0.02em;
-    margin-bottom: 8px;
-    background: linear-gradient(135deg, #e8ff47 0%, #47ffb2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  .hero-photo {
+    max-width: 900px;
+    margin: 0 auto 32px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid #2e2e2e;
+  }
+  .hero-photo img {
+    width: 100%;
+    display: block;
   }
 
-  header p {
-    font-size: 0.95rem;
-    color: #999;
-    letter-spacing: 0.03em;
-    font-weight: 500;
+  .contact-links {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .contact-link {
+    padding: 12px 28px;
+    border-radius: 999px;
+    border: 1.5px solid #3a3a3a;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #f0ece6;
+    text-decoration: none;
+    transition: all 0.25s ease;
+  }
+  .contact-link:hover {
+    border-color: #e8ff47;
+    color: #e8ff47;
   }
 
   .container {
@@ -98,11 +115,6 @@
     left: 100%;
   }
 
-  .service-icon {
-    font-size: 3rem;
-    margin-bottom: 16px;
-  }
-
   .service-name {
     font-family: 'Archivo Black', sans-serif;
     font-size: 1.3rem;
@@ -152,11 +164,18 @@
     font-size: 0.8rem;
   }
 
-  @media (max-width: 768px) {
-    header h1 {
-      font-size: 1.8rem;
-    }
+  .footer-brand {
+    display: inline-block;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: #f0ece6;
+    margin-bottom: 8px;
+  }
+  .footer-brand-dot { color: #E4572E; }
+  .footer-credit { margin-bottom: 6px; }
 
+  @media (max-width: 768px) {
     .services {
       grid-template-columns: 1fr;
     }
@@ -170,31 +189,33 @@
 <body>
 
 <header>
-  <h1>Souleandro Ribeiro</h1>
-  <p>Criativo • Desenvolvedor • Empreendedor</p>
+  <div class="hero-photo">
+    <img src="foto-leandro.jpg" alt="Leandro Ribeiro — Fotógrafo, Diretor de Criação">
+  </div>
+  <div class="contact-links">
+    <a href="https://instagram.com/eusouleandroribeiro" target="_blank" rel="noopener" class="contact-link">Instagram</a>
+    <a href="https://wa.me/5521983267661" target="_blank" rel="noopener" class="contact-link">WhatsApp</a>
+  </div>
 </header>
 
 <div class="container">
   <div class="services">
 
-    <a href="https://mateucoffee.souleandroribeiro.com.br" class="service-card">
-      <div class="service-icon">☕</div>
-      <div class="service-name">Mateu Coffee</div>
-      <div class="service-description">Plataforma de gestão e promoção para cafeterias. Sistema de ofertas dinâmicas, fidelização de clientes e analytics.</div>
-      <div class="service-link">Acessar</div>
-    </a>
-
     <a href="https://origon.souleandroribeiro.com.br" class="service-card">
-      <div class="service-icon">📊</div>
-      <div class="service-name">Origon App</div>
-      <div class="service-description">Sistema operacional financeiro para criativos e freelancers. Gestão de projetos, propostas, custos e lucro real.</div>
+      <div class="service-name">Origon</div>
+      <div class="service-description">Finanças e controle.</div>
       <div class="service-link">Acessar</div>
     </a>
 
     <a href="albums.html" class="service-card">
-      <div class="service-icon">📸</div>
-      <div class="service-name">Gallery</div>
-      <div class="service-description">Galeria de fotos organizada por álbuns. Portfólio visual de trabalhos, eventos e projetos fotográficos.</div>
+      <div class="service-name">LRP Gallery</div>
+      <div class="service-description">Organização e distribuição de fotografias.</div>
+      <div class="service-link">Acessar</div>
+    </a>
+
+    <a href="https://mateucoffee.souleandroribeiro.com.br" class="service-card">
+      <div class="service-name">Mateu Coffee</div>
+      <div class="service-description">Controle de extração de café.</div>
       <div class="service-link">Acessar</div>
     </a>
 
@@ -202,6 +223,8 @@
 </div>
 
 <footer>
+  <a href="https://www.another.com.br" target="_blank" rel="noopener" class="footer-brand">another<span class="footer-brand-dot">.</span></a>
+  <p class="footer-credit">Projeto assinado por ArtiGO!design</p>
   <p>&copy; 2026 Souleandro Ribeiro. Todos os direitos reservados.</p>
 </footer>
 
