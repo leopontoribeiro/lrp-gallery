@@ -13,7 +13,11 @@
 // ── SUAS CREDENCIAIS (preencha após criar o projeto) ────────
 const SUPABASE_URL  = 'https://vtblxwaxwuztehtxkygp.supabase.co';
 const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0Ymx4d2F4d3V6dGVodHhreWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NDQzMjMsImV4cCI6MjA5NjUyMDMyM30.0oscbNInwJzc2YN5eDYN76IBXvR0cTDbaLe4LDe0aKw';
-const STORAGE_BUCKET = 'gallery-photos';
+
+// NOTA: as fotos NÃO ficam no Supabase Storage — ficam no R2 da Cloudflare,
+// servidas pelo worker assinado (r2-signed-worker). O projeto Supabase não
+// tem nenhum bucket. A constante STORAGE_BUCKET foi removida em 2026-08-16
+// por apontar para um bucket inexistente e induzir a erro em auditoria.
 
 // ── INIT ────────────────────────────────────────────────────
 // Carrega o SDK via CDN (sem npm, sem build step)
