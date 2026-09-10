@@ -1523,13 +1523,12 @@ async function init() {
           'O álbum existe, mas as fotos não vieram.<br>Tente recarregar a página. Se continuar, avise o fotógrafo.');
         return;
       }
-      // Ordem cronologica: usa a "position" gravada no upload (a fonte real de
-      // ordem — o servidor ja devolve ordenado por ela). O nome do arquivo so
-      // desempata quando a position e igual/ausente. Antes o nome mandava
-      // sempre, o que embaralhava galerias com fotos de mais de uma camera
-      // (numeracoes de arquivo diferentes por camera nao refletem o horario real).
-      const _collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-      allPhotos.sort((a, b) => (a.pos ?? Infinity) - (b.pos ?? Infinity) || _collator.compare(a.name || '', b.name || ''));
+      // Ordem cronologica: o servidor (get_public_photos, migracao 39) ja
+      // devolve ordenado por taken_at (EXIF — hora real da foto) com
+      // position como desempate de quem nao tem EXIF. Cada pagina chega
+      // nessa ordem e as paginas sao concatenadas em sequencia, entao NAO
+      // reordena de novo aqui — um sort local por nome/position já
+      // atropelou essa ordem duas vezes antes (ver historico do arquivo).
       PHOTOS = allPhotos;
       buildGroupTabs();
       document.getElementById('coverTitle').textContent = data.name.toUpperCase();

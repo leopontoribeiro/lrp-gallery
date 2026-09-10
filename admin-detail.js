@@ -10,8 +10,12 @@ async function fetchGalleryPhotos(galleryId) {
   let all = [], from = 0;
   while (true) {
     const { data: rows, error } = await sb.from('photos')
-      .select('id, filename, storage_path, thumb_url, full_url, position, group_name')
-      .eq('gallery_id', galleryId).order('position', { ascending: true })
+      .select('id, filename, storage_path, thumb_url, full_url, position, group_name, taken_at')
+      // Mesma ordem que o cliente vê (get_public_photos, migração 39):
+      // taken_at (EXIF) manda, position é só o desempate de quem não tem EXIF.
+      .eq('gallery_id', galleryId)
+      .order('taken_at', { ascending: true, nullsFirst: false })
+      .order('position', { ascending: true })
       .range(from, from + 499);
     if (error) throw error;
     if (!rows?.length) break;
@@ -20,6 +24,15 @@ async function fetchGalleryPhotos(galleryId) {
     from += 500;
   }
   return all;
+}
+
+// Mesmo critério do ORDER BY de fetchGalleryPhotos/get_public_photos —
+// usado depois que g.photos já está em memória (evita repetir a query).
+function _byTakenThenPosition(a, b) {
+  if (a.taken_at && b.taken_at) return a.taken_at < b.taken_at ? -1 : a.taken_at > b.taken_at ? 1 : a.position - b.position;
+  if (a.taken_at) return -1;
+  if (b.taken_at) return 1;
+  return a.position - b.position;
 }
 
 async function openDetail(id) {
@@ -41,7 +54,7 @@ async function openDetail(id) {
   renderResLinks(g);
   renderDetailPassword(g);
 
-  g.photos?.sort((a,b) => a.position - b.position);
+  g.photos?.sort(_byTakenThenPosition);
   renderDetailPhotos(g);
   goTo('detail');
   document.getElementById('topbar-title').textContent = g.name.toUpperCase();
@@ -77,6 +90,7 @@ function makeDetailPhotoEl(photo) {
     e.dataTransfer.effectAllowed = 'move';
     try { e.dataTransfer.setData('text/plain', String(photo.id)); } catch (err) {}
     div.classList.add('dragging');
+    _reorderTouched.add(String(photo.id));
   });
   div.addEventListener('dragend', () => {
     div.classList.remove('dragging');
@@ -160,11 +174,13 @@ let _lastSelIndex = -1;     // índice da última foto clicada (âncora do Shift
 // ── REORDENAR (arrastar-e-soltar) ──
 let reorderMode = false;
 let _reorderDirty = false;  // true assim que alguma foto foi arrastada nesta sessão de reordenação
+let _reorderTouched = new Set(); // ids realmente soltos em outro lugar (não os que só deslizaram por tabela)
 
 async function toggleReorderMode() {
   if (!reorderMode) {
     if (groupMode) toggleGroupMode(); // os dois modos mexem no clique da foto — não rolam juntos
     reorderMode = true;
+    _reorderTouched = new Set();
     document.getElementById('reorder-bar').style.display = 'flex';
     document.getElementById('detail-grid').classList.add('reorder-mode');
     document.getElementById('btnReorderMode').classList.add('btn-primary');
@@ -181,6 +197,7 @@ async function toggleReorderMode() {
 function cancelReorder() {
   reorderMode = false;
   _reorderDirty = false;
+  _reorderTouched = new Set();
   document.getElementById('reorder-bar').style.display = 'none';
   document.getElementById('detail-grid').classList.remove('reorder-mode');
   document.getElementById('btnReorderMode').classList.remove('btn-primary');
@@ -191,15 +208,46 @@ function cancelReorder() {
 // manda só o que mudou (UPDATE direto — não a RPC batch_update_photo_positions,
 // que existe no banco mas nunca teve grant/uso; ver migração 36).
 async function saveReorderedPositions() {
-  const ids = Array.from(document.querySelectorAll('#detail-grid .detail-photo')).map(el => el.dataset.id);
-  if (!ids.length) { cancelReorder(); return; }
+  const domIds = Array.from(document.querySelectorAll('#detail-grid .detail-photo')).map(el => el.dataset.id);
+  if (!domIds.length) { cancelReorder(); return; }
 
-  const { data: rows, error: fetchErr } = await sb.from('photos').select('id, position').eq('gallery_id', currentGalleryId);
-  if (fetchErr) { toast('Erro ao conferir posições atuais: ' + fetchErr.message, 'error'); return; }
-  const curPos = new Map(rows.map(r => [String(r.id), r.position]));
-  const updates = [];
-  ids.forEach((id, i) => { if (curPos.get(id) !== i) updates.push({ id, position: i }); });
-  if (!updates.length) { toast('A ordem já estava assim', ''); cancelReorder(); return; }
+  // Busca já na mesma ordem que o cliente vê (taken_at manda, position desempata).
+  const { data: rows, error: fetchErr } = await sb.from('photos')
+    .select('id, position, taken_at').eq('gallery_id', currentGalleryId)
+    .order('taken_at', { ascending: true, nullsFirst: false })
+    .order('position', { ascending: true });
+  if (fetchErr) { toast('Erro ao conferir a ordem atual: ' + fetchErr.message, 'error'); return; }
+  const byId = new Map(rows.map(r => [String(r.id), r]));
+  const curOrderIds = rows.map(r => String(r.id));
+
+  // position: renumera 0..N-1 na ordem final — fica como desempate/fallback
+  // pras fotos sem EXIF (nulls last no ORDER BY).
+  const patches = new Map();
+  domIds.forEach((id, i) => {
+    if (curOrderIds[i] !== id) patches.set(id, { id, position: i });
+  });
+
+  // taken_at: só pras fotos que você REALMENTE arrastou (_reorderTouched) —
+  // ganham um horário sintético entre os novos vizinhos, pra valer de
+  // verdade na ordenação (que agora prioriza taken_at sobre position). As
+  // fotos que só deslizaram de lugar por causa do arraste de outra mantêm
+  // a data EXIF real que já tinham.
+  const effectiveTime = (id) => { const r = byId.get(id); return r?.taken_at ? new Date(r.taken_at).getTime() : null; };
+  for (const id of _reorderTouched) {
+    if (!byId.has(id)) continue;
+    const idx = domIds.indexOf(id);
+    if (idx === -1) continue;
+    let before = null, after = null;
+    for (let i = idx - 1; i >= 0 && before === null; i--) before = effectiveTime(domIds[i]);
+    for (let i = idx + 1; i < domIds.length && after === null; i++) after = effectiveTime(domIds[i]);
+    const t = (before !== null && after !== null) ? before + (after - before) / 2
+            : before !== null ? before + 1000
+            : after !== null ? after - 1000
+            : Date.now();
+    patches.set(id, { ...(patches.get(id) || { id }), taken_at: new Date(t).toISOString() });
+  }
+
+  if (!patches.size) { toast('A ordem já estava assim', ''); cancelReorder(); return; }
 
   const btn = document.getElementById('reorder-save-btn');
   btn.disabled = true; btn.textContent = 'Salvando...';
@@ -207,16 +255,21 @@ async function saveReorderedPositions() {
     // UPDATE direto na tabela (mesmo padrão do resto do admin — a policy
     // auth_all_photos já libera authenticated pra isso). Em lotes de 20 em
     // paralelo pra não abrir uma conexão por foto de uma vez só.
+    const updates = [...patches.values()];
     for (let i = 0; i < updates.length; i += 20) {
       const batch = updates.slice(i, i + 20);
-      const results = await Promise.all(batch.map(u =>
-        sb.from('photos').update({ position: u.position }).eq('id', u.id)));
+      const results = await Promise.all(batch.map(u => {
+        const patch = {};
+        if (u.position !== undefined) patch.position = u.position;
+        if (u.taken_at !== undefined) patch.taken_at = u.taken_at;
+        return sb.from('photos').update(patch).eq('id', u.id);
+      }));
       const failed = results.find(r => r.error);
       if (failed) throw failed.error;
     }
     logAdminAction('reorder_photos', { galleryId: currentGalleryId, count: updates.length });
     toast(`Ordem salva — ${updates.length} foto(s) atualizada(s)`, 'success');
-    reorderMode = false; _reorderDirty = false;
+    reorderMode = false; _reorderDirty = false; _reorderTouched = new Set();
     document.getElementById('reorder-bar').style.display = 'none';
     document.getElementById('detail-grid').classList.remove('reorder-mode');
     document.getElementById('btnReorderMode').classList.remove('btn-primary');
@@ -283,7 +336,7 @@ async function applyGroup(remove = false) {
   const { data: g } = await sb.from('galleries').select('*').eq('id', currentGalleryId).single();
   if (g) {
     try { g.photos = await fetchGalleryPhotos(currentGalleryId); await signPhotos(g.photos); } catch(e) { g.photos = []; }
-    g.photos.sort((a,b) => a.position - b.position);
+    g.photos.sort(_byTakenThenPosition);
     renderDetailPhotos(g);
   }
   updateGroupBar();

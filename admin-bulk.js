@@ -73,7 +73,7 @@ async function compressImageToTarget(file, maxBytes) {
 
 // Sobe uma foto já processada (blob JPEG + nome novo) pra uma galeria via R2.
 // Reaproveita _putR2 (admin-galleries.js) — mesma assinatura/RPC do resto do admin.
-async function uploadProcessedPhoto(blob, newName, galleryId, position, width, height) {
+async function uploadProcessedPhoto(blob, newName, galleryId, position, width, height, takenAt) {
   const safe = newName.replace(/[^a-zA-Z0-9._-]/g, '_');
   const baseKey = `galleries/${galleryId}/${Date.now()}_${position}_${safe}`;
   const fullUrl = await _putR2(baseKey, blob, 'image/jpeg');
@@ -96,7 +96,7 @@ async function uploadProcessedPhoto(blob, newName, galleryId, position, width, h
   const { data: photo, error } = await sb.from('photos').insert({
     gallery_id: galleryId, filename: newName,
     storage_path: baseKey, thumb_url: thumbUrl, full_url: fullUrl,
-    size_bytes: blob.size, position, width, height,
+    size_bytes: blob.size, position, width, height, taken_at: takenAt,
   }).select('id').single();
   if (error) console.error('uploadProcessedPhoto (insert):', error);
   return photo?.id || null;
@@ -154,10 +154,14 @@ async function startBulkProcess() {
       const seq = String(position + 1).padStart(pad, '0');
       const newName = `${safeBase} ${seq}.jpg`;
       try {
+        // Lê o EXIF do arquivo ORIGINAL — compressImageToTarget passa por
+        // canvas.toBlob, que apaga todo metadado (é por isso que a hora de
+        // captura tem que ser lida antes, não depois, da recompressão).
+        const takenAtP = extractTakenAt(file);
         const { blob, width, height, over: wasOver } = await compressImageToTarget(file, maxBytes);
         if (wasOver) over++;
         if (dest === 'gallery') {
-          const photoId = await uploadProcessedPhoto(blob, newName, galleryId, position, width, height);
+          const photoId = await uploadProcessedPhoto(blob, newName, galleryId, position, width, height, await takenAtP);
           if (!photoId) throw new Error('upload falhou');
           if (position === 0) firstPhotoId = photoId;
         } else {

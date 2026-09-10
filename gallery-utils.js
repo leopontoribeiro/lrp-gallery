@@ -96,6 +96,22 @@ function sortByEventDate(list, nameKey = 'name') {
   });
 }
 
+// Data de captura real da foto (EXIF DateTimeOriginal), pra ordenar a
+// galeria pela hora que a câmera gravou — não pela ordem de upload (que é
+// só a ordem em que os arquivos foram selecionados no Finder/picker, sem
+// relação garantida com a hora real; ver migração 39). Só existe no admin
+// (exifr.js carregado lá, não no gallery.html do cliente). Se a foto não
+// tiver EXIF (recomprimida, print, sem câmera), volta null — a foto cai no
+// fallback por position (ver get_public_photos).
+async function extractTakenAt(file) {
+  if (typeof exifr === 'undefined') return null;
+  try {
+    const tags = await exifr.parse(file, { pick: ['DateTimeOriginal', 'CreateDate', 'ModifyDate'] });
+    const d = tags?.DateTimeOriginal || tags?.CreateDate || tags?.ModifyDate;
+    return (d instanceof Date && !isNaN(d)) ? d.toISOString() : null;
+  } catch (e) { return null; }
+}
+
 // Toast simples. `type` ('success'|'error') é opcional — CSS de cada página
 // decide se estiliza a variante; a base (#toast + .show) é comum às duas.
 function toast(msg, type = '') {

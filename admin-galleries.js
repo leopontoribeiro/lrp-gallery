@@ -377,6 +377,10 @@ async function uploadGalleryPhoto(file, galleryId, position) {
     }
   }
 
+  // Lê a data de captura (EXIF) do arquivo original ANTES de qualquer
+  // processamento — em paralelo com o resto, já que não depende de nada.
+  const takenAtP = extractTakenAt(file);
+
   const { im, url, w, h } = await _loadImageEl(file);
   const thumbBlob = await _makeThumbBlob(im, w, h);
   const lgBlob    = await _makeLgBlob(im, w, h);
@@ -396,7 +400,7 @@ async function uploadGalleryPhoto(file, galleryId, position) {
     gallery_id: galleryId, filename: file.name,
     storage_path: baseKey, thumb_url: thumbUrl || fullUrl,
     full_url: fullUrl, size_bytes: file.size, position,
-    width: w, height: h
+    width: w, height: h, taken_at: await takenAtP
   }).select('id').single();
   if (insErr) console.error('uploadGalleryPhoto (insert):', insErr);
   return photo?.id || null;
