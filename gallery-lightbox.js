@@ -173,11 +173,21 @@ function _zipBase() {
   const n = (typeof galleryName !== 'undefined' && galleryName) ? galleryName : 'galeria';
   return n.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim() || 'galeria';
 }
+// TESTE sem custo (10/set/2026): pulando o ZIP server-side aqui de propósito.
+// O Worker roda no plano Gratuito do Cloudflare — só 10ms de CPU por
+// requisição. Um lote de poucas dezenas de fotos já estoura isso no meio do
+// streaming (visto ao vivo no log: "Worker exceeded CPU time limit" no
+// /zip), e o ZIP sai sem o fechamento (central directory) — o navegador
+// salva normal, sem erro, e só na hora de abrir aparece quebrado. Favoritas
+// é subconjunto curado (não o álbum inteiro), então monta bem no navegador
+// de quem baixa via JSZip, sem esbarrar em limite nenhum do Worker.
+// Se resolver de vez (upgrade pro plano Pago, US$5/mês -> 5min de CPU),
+// pode voltar a tentar serverZip primeiro (era assim antes desta linha):
+//   if (await serverZip(favs.map(p => p.id), `${_zipBase()} - favoritas.zip`)) return;
 async function downloadFavorites() {
   const favs = PHOTOS.filter(p => liked.has(p.id));
   if (favs.length === 0) { toast('Nenhuma foto favoritada ainda'); return; }
   favs.forEach(p => trackEvent('save', p.id));
-  if (await serverZip(favs.map(p => p.id), `${_zipBase()} - favoritas.zip`)) return;
   await clientZip(favs, `${_zipBase()} - favoritas (%N).zip`, 'favorita(s)');
 }
 // Baixa só o grupo/aba selecionado no momento (ex.: NOIVOS, Palestrantes).
