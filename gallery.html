@@ -1481,7 +1481,7 @@ async function init() {
       const mapPhoto = p => ({
         id: p.id, name: p.filename, thumb: toThumb(p.thumb_url), full: p.full_url, lg: toLg(p.full_url),
         ratio: (p.width && p.height) ? p.width / p.height : null,
-        groups: parseTags(p.group_name)
+        groups: parseTags(p.group_name), pos: p.position
       });
 
       let pageSize = 500;
@@ -1523,11 +1523,13 @@ async function init() {
           'O álbum existe, mas as fotos não vieram.<br>Tente recarregar a página. Se continuar, avise o fotógrafo.');
         return;
       }
-      // Ordena da primeira foto até a última pela numeração do nome do arquivo
-      // (ordenação natural: DSC_2 antes de DSC_10). Garante sequência correta
-      // mesmo quando o position foi gravado fora de ordem no upload.
+      // Ordem cronologica: usa a "position" gravada no upload (a fonte real de
+      // ordem — o servidor ja devolve ordenado por ela). O nome do arquivo so
+      // desempata quando a position e igual/ausente. Antes o nome mandava
+      // sempre, o que embaralhava galerias com fotos de mais de uma camera
+      // (numeracoes de arquivo diferentes por camera nao refletem o horario real).
       const _collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-      allPhotos.sort((a, b) => _collator.compare(a.name || '', b.name || ''));
+      allPhotos.sort((a, b) => (a.pos ?? Infinity) - (b.pos ?? Infinity) || _collator.compare(a.name || '', b.name || ''));
       PHOTOS = allPhotos;
       buildGroupTabs();
       document.getElementById('coverTitle').textContent = data.name.toUpperCase();

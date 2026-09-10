@@ -697,6 +697,14 @@ body {
   background: var(--accent, #e8ff47); color: #111;
   font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;
 }
+
+/* Modo reordenar: arrastar-e-soltar (admin-detail.js — toggleReorderMode) */
+#detail-grid.reorder-mode .detail-photo { cursor: grab; }
+#detail-grid.reorder-mode .detail-photo:active { cursor: grabbing; }
+#detail-grid.reorder-mode .detail-photo-del,
+#detail-grid.reorder-mode .detail-photo-cover { pointer-events: none; opacity: 0 !important; }
+.detail-photo.dragging { opacity: 0.35; }
+.detail-photo.drag-over { outline: 2px dashed var(--accent, #e8ff47); outline-offset: -2px; }
 .detail-photo-group {
   position: absolute; bottom: 6px; left: 6px; max-width: calc(100% - 12px);
   background: rgba(0,0,0,0.72); color: #e8ff47;
@@ -1306,6 +1314,10 @@ body {
         <div class="section-header" style="margin-bottom:12px">
           <span class="section-title" id="detail-photo-count">0 fotos</span>
           <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost" id="btnReorderMode" onclick="toggleReorderMode()" title="Arraste as fotos para corrigir a ordem manualmente">
+              <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg>
+              Reordenar
+            </button>
             <button class="btn btn-ghost" id="btnGroupMode" onclick="toggleGroupMode()">
               <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
               Grupos
@@ -1365,6 +1377,14 @@ body {
           <button class="btn btn-ghost" onclick="renameAllPhotos()" style="padding:8px 14px;font-size:0.65rem">Renomear todas</button>
           <button class="btn btn-danger" onclick="deleteSelectedPhotos()" style="padding:8px 14px;font-size:0.65rem">Apagar selecionadas</button>
           <button class="btn btn-ghost" onclick="toggleGroupMode()" style="padding:8px 14px;font-size:0.65rem">Concluir</button>
+        </div>
+
+        <!-- Barra de reordenar (arrastar-e-soltar) -->
+        <div id="reorder-bar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px">
+          <span style="font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;color:var(--muted)">ARRASTE AS FOTOS PARA REORDENAR</span>
+          <span style="flex:1"></span>
+          <button class="btn btn-ghost" onclick="cancelReorder()" style="padding:8px 14px;font-size:0.65rem">Cancelar</button>
+          <button class="btn btn-primary" id="reorder-save-btn" onclick="saveReorderedPositions()" style="padding:8px 14px;font-size:0.65rem">Salvar ordem</button>
         </div>
 
         <div class="detail-grid" id="detail-grid"></div>

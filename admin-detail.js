@@ -58,6 +58,7 @@ function makeDetailPhotoEl(photo) {
   div.className = 'detail-photo' + (isCover ? ' is-cover' : '') +
                   (groupSelection.has(String(photo.id)) ? ' selected' : '');
   div.dataset.id = photo.id;
+  div.draggable = reorderMode;
   div.innerHTML = `
     <img src="${photo.thumb_url}" alt="${esc(photo.filename)}" loading="lazy">
     ${photo.group_name ? `<span class="detail-photo-group">${esc(parseTags(photo.group_name).join(' · '))}</span>` : ''}
@@ -68,6 +69,37 @@ function makeDetailPhotoEl(photo) {
       <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   `;
+  // Arrastar-para-reordenar (só ativo em modo reordenar — ver toggleReorderMode).
+  // Move o próprio elemento no DOM a cada dragover; nada é salvo no banco até
+  // "Salvar ordem" (saveReorderedPositions), então Cancelar é só re-renderizar.
+  div.addEventListener('dragstart', (e) => {
+    if (!reorderMode) return;
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', String(photo.id)); } catch (err) {}
+    div.classList.add('dragging');
+  });
+  div.addEventListener('dragend', () => {
+    div.classList.remove('dragging');
+    document.querySelectorAll('.detail-photo.drag-over').forEach(el => el.classList.remove('drag-over'));
+  });
+  div.addEventListener('dragover', (e) => {
+    if (!reorderMode) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const dragging = document.querySelector('.detail-photo.dragging');
+    if (!dragging || dragging === div) return;
+    div.classList.add('drag-over');
+    const rect = div.getBoundingClientRect();
+    const before = (e.clientX - rect.left) < rect.width / 2;
+    document.getElementById('detail-grid').insertBefore(dragging, before ? div : div.nextSibling);
+    _reorderDirty = true;
+  });
+  div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+  div.addEventListener('drop', (e) => {
+    if (!reorderMode) return;
+    e.preventDefault();
+    div.classList.remove('drag-over');
+  });
   div.addEventListener('click', (e) => {
     if (!groupMode) return;
     e.stopPropagation();
@@ -125,7 +157,84 @@ const groupSelection = new Set();
 let _detailPhotoIds = [];   // ordem atual das fotos (p/ seleção por Shift)
 let _lastSelIndex = -1;     // índice da última foto clicada (âncora do Shift)
 
-function toggleGroupMode() {
+// ── REORDENAR (arrastar-e-soltar) ──
+let reorderMode = false;
+let _reorderDirty = false;  // true assim que alguma foto foi arrastada nesta sessão de reordenação
+
+async function toggleReorderMode() {
+  if (!reorderMode) {
+    if (groupMode) toggleGroupMode(); // os dois modos mexem no clique da foto — não rolam juntos
+    reorderMode = true;
+    document.getElementById('reorder-bar').style.display = 'flex';
+    document.getElementById('detail-grid').classList.add('reorder-mode');
+    document.getElementById('btnReorderMode').classList.add('btn-primary');
+    document.querySelectorAll('.detail-photo').forEach(el => { el.draggable = true; });
+  } else {
+    if (_reorderDirty && !(await showConfirmModal('Descartar a nova ordem sem salvar?'))) return;
+    cancelReorder();
+  }
+}
+
+// Descarta o arraste e recarrega a galeria do banco (mesmo padrão usado no
+// resto do arquivo — ex.: deletePhoto — pra voltar a um estado conhecido em
+// vez de tentar reconstruir a ordem salva a partir de memória local).
+function cancelReorder() {
+  reorderMode = false;
+  _reorderDirty = false;
+  document.getElementById('reorder-bar').style.display = 'none';
+  document.getElementById('detail-grid').classList.remove('reorder-mode');
+  document.getElementById('btnReorderMode').classList.remove('btn-primary');
+  openDetail(currentGalleryId);
+}
+
+// Lê a ordem atual do DOM, compara com a position gravada agora no banco e
+// manda só o que mudou (UPDATE direto — não a RPC batch_update_photo_positions,
+// que existe no banco mas nunca teve grant/uso; ver migração 36).
+async function saveReorderedPositions() {
+  const ids = Array.from(document.querySelectorAll('#detail-grid .detail-photo')).map(el => el.dataset.id);
+  if (!ids.length) { cancelReorder(); return; }
+
+  const { data: rows, error: fetchErr } = await sb.from('photos').select('id, position').eq('gallery_id', currentGalleryId);
+  if (fetchErr) { toast('Erro ao conferir posições atuais: ' + fetchErr.message, 'error'); return; }
+  const curPos = new Map(rows.map(r => [String(r.id), r.position]));
+  const updates = [];
+  ids.forEach((id, i) => { if (curPos.get(id) !== i) updates.push({ id, position: i }); });
+  if (!updates.length) { toast('A ordem já estava assim', ''); cancelReorder(); return; }
+
+  const btn = document.getElementById('reorder-save-btn');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    // UPDATE direto na tabela (mesmo padrão do resto do admin — a policy
+    // auth_all_photos já libera authenticated pra isso). Em lotes de 20 em
+    // paralelo pra não abrir uma conexão por foto de uma vez só.
+    for (let i = 0; i < updates.length; i += 20) {
+      const batch = updates.slice(i, i + 20);
+      const results = await Promise.all(batch.map(u =>
+        sb.from('photos').update({ position: u.position }).eq('id', u.id)));
+      const failed = results.find(r => r.error);
+      if (failed) throw failed.error;
+    }
+    logAdminAction('reorder_photos', { galleryId: currentGalleryId, count: updates.length });
+    toast(`Ordem salva — ${updates.length} foto(s) atualizada(s)`, 'success');
+    reorderMode = false; _reorderDirty = false;
+    document.getElementById('reorder-bar').style.display = 'none';
+    document.getElementById('detail-grid').classList.remove('reorder-mode');
+    document.getElementById('btnReorderMode').classList.remove('btn-primary');
+    document.querySelectorAll('.detail-photo').forEach(el => { el.draggable = false; });
+    openDetail(currentGalleryId); // recarrega já na ordem nova, confirmada pelo banco
+  } catch (e) {
+    console.error('saveReorderedPositions:', e);
+    toast('Erro ao salvar ordem: ' + (e.message || e), 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar ordem';
+  }
+}
+
+async function toggleGroupMode() {
+  if (!groupMode && reorderMode) {
+    if (_reorderDirty && !(await showConfirmModal('Descartar a nova ordem sem salvar?'))) return;
+    cancelReorder();
+  }
   groupMode = !groupMode;
   groupSelection.clear();
   _lastSelIndex = -1;
