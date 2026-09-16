@@ -266,6 +266,13 @@ export default {
   // Cron diário: reconciliação. O incremental já é feito pelo dual-write no PUT;
   // isto é rede de segurança — varre um lote por dia, retomando de onde parou.
   async scheduled(event, env, ctx) {
+    // Cron novo (a cada 10min, ver wrangler.toml): so o backfill de taken_at,
+    // roda mais vezes pra zerar o backlog rapido sem competir com os jobs
+    // diarios abaixo.
+    if (event.cron === '*/10 * * * *') {
+      ctx.waitUntil(backfillTakenAt(env));
+      return;
+    }
     ctx.waitUntil(reconcile(env));
     ctx.waitUntil(cleanupPendingOrders(env));
     ctx.waitUntil(retentionCleanup(env));
@@ -377,6 +384,161 @@ async function healthcheck(env) {
 
   async function save(env, o) {
     await env.BACKUP.put('_state/healthcheck.json', JSON.stringify(o, null, 2));
+  }
+}
+
+// ============================================================
+// Backfill automatico de taken_at (Migracao 40)
+//
+// POR QUE: taken_at so era preenchido em upload novo (admin-galleries.js/
+// admin-bulk.js), ou por um script manual (backfill-taken-at.mjs) que
+// alguem tinha que lembrar de rodar toda vez que uma galeria antiga ou uma
+// falha de extracao deixava fotos sem data — ate la, a galeria ordenava por
+// "position" (ordem de upload), que pode vir de tras pra frente. Isso virou
+// rotina do sistema: um cron a parte (mais frequente que o diario, ver
+// wrangler.toml) le a foto direto do R2 (sem custo de rede pro Supabase),
+// acha o EXIF DateTimeOriginal na unha (parser proprio abaixo — mais barato
+// e mais previsivel em CPU do que trazer uma lib pensada pra Node/browser
+// pro isolate do Worker) e grava via RPC segura (mesmo padrao WORKER_SECRET
+// das migracoes 12/35). So le os primeiros ~128KB de cada arquivo (o EXIF
+// fica sempre pertinho do inicio) — nunca decodifica a imagem inteira, entao
+// nao esbarra no limite de CPU que ja quebrou o ZIP uma vez (ver
+// gallery-lightbox.js).
+//
+// Fuso: EXIF nao carrega timezone, so "YYYY:MM:DD HH:MM:SS" da hora local da
+// camera. Assume America/Sao_Paulo (UTC-3 fixo, sem horario de verao desde
+// 2019) pra bater com a mesma suposicao do backfill-taken-at.mjs manual (que
+// interpretava a mesma string na hora local do Mac) — evita misturar dois
+// fusos diferentes numa mesma galeria e embaralhar a ordem nas fotos que
+// ainda faltavam quando esse cron entrou em producao.
+//
+// Fotos sem EXIF ficam marcadas taken_at_checked=true (taken_at continua
+// null, cai no fallback por position) pra nao serem relidas pra sempre a
+// cada 10 minutos. Falha de leitura (rede/R2) NAO marca checked — tenta de
+// novo no proximo cron.
+const TZ_OFFSET_MIN_BRASIL = 3 * 60; // America/Sao_Paulo = UTC-3
+
+function parseExifDateToIso(bytes) {
+  if (bytes.length < 4 || bytes[0] !== 0xFF || bytes[1] !== 0xD8) return null;
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let off = 2;
+  while (off + 4 <= bytes.length) {
+    if (bytes[off] !== 0xFF) break;
+    const marker = bytes[off + 1];
+    if (marker === 0xD8 || marker === 0xD9) { off += 2; continue; }
+    if (marker === 0xDA) break; // inicio dos dados de imagem — acabou o header
+    if (off + 4 > bytes.length) break;
+    const segLen = dv.getUint16(off + 2, false);
+    if (marker === 0xE1) {
+      const segStart = off + 4;
+      if (segStart + 6 <= bytes.length &&
+          bytes[segStart] === 0x45 && bytes[segStart + 1] === 0x78 && bytes[segStart + 2] === 0x69 &&
+          bytes[segStart + 3] === 0x66 && bytes[segStart + 4] === 0x00 && bytes[segStart + 5] === 0x00) {
+        const iso = parseTiffForDate(dv, bytes, segStart + 6);
+        if (iso) return iso;
+      }
+    }
+    if (segLen < 2) break;
+    off += 2 + segLen;
+  }
+  return null;
+}
+
+function parseTiffForDate(dv, bytes, tiffStart) {
+  if (tiffStart + 8 > bytes.length) return null;
+  const little = bytes[tiffStart] === 0x49 && bytes[tiffStart + 1] === 0x49;
+  const big = bytes[tiffStart] === 0x4D && bytes[tiffStart + 1] === 0x4D;
+  if (!little && !big) return null;
+  const le = little;
+  const ifd0Off = dv.getUint32(tiffStart + 4, le);
+  const exifIfdOff = findIfdTag(dv, bytes, tiffStart + ifd0Off, 0x8769, le);
+  if (exifIfdOff == null) return null;
+  const dateStr = readAsciiIfdTag(dv, bytes, tiffStart, tiffStart + exifIfdOff, 0x9003, le)
+               || readAsciiIfdTag(dv, bytes, tiffStart, tiffStart + exifIfdOff, 0x9004, le);
+  return dateStr ? exifDateStringToIso(dateStr) : null;
+}
+
+function findIfdTag(dv, bytes, ifdStart, wantTag, le) {
+  if (ifdStart + 2 > bytes.length) return null;
+  const count = dv.getUint16(ifdStart, le);
+  for (let i = 0; i < count; i++) {
+    const entry = ifdStart + 2 + i * 12;
+    if (entry + 12 > bytes.length) break;
+    if (dv.getUint16(entry, le) === wantTag) return dv.getUint32(entry + 8, le);
+  }
+  return null;
+}
+
+function readAsciiIfdTag(dv, bytes, tiffStart, ifdStart, wantTag, le) {
+  if (ifdStart + 2 > bytes.length) return null;
+  const count = dv.getUint16(ifdStart, le);
+  for (let i = 0; i < count; i++) {
+    const entry = ifdStart + 2 + i * 12;
+    if (entry + 12 > bytes.length) break;
+    if (dv.getUint16(entry, le) !== wantTag) continue;
+    if (dv.getUint16(entry + 2, le) !== 2) return null; // esperado ASCII
+    const cnt = dv.getUint32(entry + 4, le);
+    const strStart = cnt <= 4 ? entry + 8 : tiffStart + dv.getUint32(entry + 8, le);
+    if (strStart < 0 || strStart + cnt > bytes.length) return null;
+    let s = '';
+    for (let j = 0; j < cnt; j++) {
+      const c = bytes[strStart + j];
+      if (c === 0) break;
+      s += String.fromCharCode(c);
+    }
+    return s || null;
+  }
+  return null;
+}
+
+function exifDateStringToIso(s) {
+  const m = s.match(/^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3], h = +m[4], mi = +m[5], se = +m[6];
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  // hora local do Brasil -> UTC: soma o offset (UTC-3 => +3h pra chegar em UTC)
+  const utcMs = Date.UTC(y, mo - 1, d, h, mi, se) + TZ_OFFSET_MIN_BRASIL * 60 * 1000;
+  return new Date(utcMs).toISOString();
+}
+
+// Lote: le do R2 so o comeco de cada arquivo (128KB cobre o EXIF de qualquer
+// camera/celular na pratica), roda em paralelo (R2 e I/O, nao CPU — mesmo
+// raciocinio do reconcile() acima, que varre milhares de objetos por noite
+// sem esbarrar no limite de CPU do plano Gratuito).
+async function backfillTakenAt(env) {
+  if (!env.WORKER_SECRET || !env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return;
+  const t0 = Date.now();
+  const BUDGET_MS = 20000;
+  const BATCH = 200;
+  const RANGE_BYTES = 131072;
+  let totalOk = 0, totalNoExif = 0, totalFailed = 0, rounds = 0;
+
+  while (Date.now() - t0 < BUDGET_MS) {
+    const rows = await sbRpc(env, 'get_photos_missing_taken_at', { p_secret: env.WORKER_SECRET, p_limit: BATCH });
+    if (!rows || !rows.length) break;
+    rounds++;
+
+    const updates = [];
+    await Promise.all(rows.map(async (r) => {
+      try {
+        const obj = await env.PHOTOS.get(r.r2_key, { range: { offset: 0, length: RANGE_BYTES } });
+        if (!obj) { totalFailed++; return; } // objeto sumiu — nao marca checked, tenta de novo
+        const buf = new Uint8Array(await obj.arrayBuffer());
+        const iso = parseExifDateToIso(buf);
+        if (iso) { updates.push({ id: r.id, taken_at: iso }); totalOk++; }
+        else { updates.push({ id: r.id, taken_at: null }); totalNoExif++; } // checado, sem EXIF
+      } catch (e) { totalFailed++; } // erro de leitura/parse — nao marca checked
+    }));
+
+    if (!updates.length) break; // ninguem processou nessa rodada — nao gira em falso
+    await sbRpc(env, 'set_taken_at_batch', { p_secret: env.WORKER_SECRET, p_updates: updates });
+  }
+
+  if (env.BACKUP) {
+    await env.BACKUP.put('_state/last_backfill_taken_at.json', JSON.stringify({
+      at: new Date().toISOString(), comExif: totalOk, semExif: totalNoExif, falhas: totalFailed,
+      rounds, ms: Date.now() - t0,
+    })).catch(() => {});
   }
 }
 

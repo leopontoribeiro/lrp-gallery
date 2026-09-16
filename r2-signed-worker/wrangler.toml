@@ -13,9 +13,12 @@ bucket_name = "gallery-photos"
 binding = "BACKUP"
 bucket_name = "gallery-photos-backup"
 
-# Backup diário das fotos (04:00 UTC) — réplica incremental PHOTOS -> BACKUP
+# Backup diário das fotos (04:00 UTC) — réplica incremental PHOTOS -> BACKUP.
+# Segundo cron (a cada 10min): backfill automático de taken_at (migração 40)
+# — zera o backlog de galerias antigas em algumas rodadas e depois só pega o
+# que escapar do upload novo, sem depender de rodar script na mão de novo.
 [triggers]
-crons = ["0 4 * * *"]
+crons = ["0 4 * * *", "*/10 * * * *"]
 
 # Rate limiting nativo (por colo). Só endpoints caros são limitados. GET de
 # imagem é barato, cacheado na borda e já exige assinatura — limitá-lo
