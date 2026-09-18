@@ -277,6 +277,7 @@ export default {
     ctx.waitUntil(cleanupPendingOrders(env));
     ctx.waitUntil(retentionCleanup(env));
     ctx.waitUntil(backupDatabase(env));
+    ctx.waitUntil(cleanupOldBackupDumps(env));
     ctx.waitUntil(healthcheck(env));
   },
 };
@@ -766,6 +767,41 @@ async function backupDatabase(env) {
     await sendEmail(env, 'souleandroribeiro@gmail.com', '⚠ Backup do Gallery com falha',
       `<p>O backup de ${day} teve problema em: <b>${falhou.map(([k]) => k).join(', ')}</b></p>`
       + `<pre>${JSON.stringify(resumo, null, 2)}</pre>`);
+  }
+}
+
+// Apaga dumps de backup do banco (backups/AAAA-MM-DD/*) com mais de
+// RETENTION_DAYS dias. Sem isso, backupDatabase() grava ~7 arquivos JSON
+// TODO dia pra sempre — pequenos individualmente, mas acumulam sem limite
+// e pesam no armazenamento do R2 (é cobrado por GB/mes, continuo, nao e
+// coisa que "some sozinha"). 30 dias cobre qualquer investigacao razoavel
+// de "o que mudou" sem virar um historico infinito.
+const BACKUP_DUMP_RETENTION_DAYS = 30;
+async function cleanupOldBackupDumps(env) {
+  if (!env.BACKUP) return;
+  try {
+    const cutoff = new Date(Date.now() - BACKUP_DUMP_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+    const cutoffDay = cutoff.toISOString().slice(0, 10); // "AAAA-MM-DD", comparavel como string
+
+    let cursor, toDelete = [];
+    do {
+      const list = await env.BACKUP.list({ prefix: 'backups/', cursor, limit: 1000 });
+      for (const o of list.objects) {
+        const m = o.key.match(/^backups\/(\d{4}-\d{2}-\d{2})\//);
+        if (m && m[1] < cutoffDay) toDelete.push(o.key);
+      }
+      cursor = list.truncated ? list.cursor : undefined;
+    } while (cursor);
+
+    for (let i = 0; i < toDelete.length; i += 1000) {
+      await env.BACKUP.delete(toDelete.slice(i, i + 1000));
+    }
+
+    await env.BACKUP.put('_state/last_backup_dump_cleanup.json', JSON.stringify({
+      at: new Date().toISOString(), apagados: toDelete.length, corteDias: BACKUP_DUMP_RETENTION_DAYS,
+    })).catch(() => {});
+  } catch (e) {
+    await logServerError(env, 'cleanupOldBackupDumps falhou', e.message);
   }
 }
 
