@@ -89,8 +89,8 @@ async function uploadProcessedPhoto(blob, newName, galleryId, position, width, h
     canvas.width = tw; canvas.height = th;
     canvas.getContext('2d').drawImage(bmp, 0, 0, tw, th);
     bmp.close();
-    const tblob = await new Promise(res => canvas.toBlob(res, 'image/webp', 0.8));
-    if (tblob) { const u = await _putR2(`${baseKey}_thumb.webp`, tblob, 'image/webp'); if (u) thumbUrl = u; }
+    const tblob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.8));
+    if (tblob) { const u = await _putR2(`${baseKey}_thumb.jpg`, tblob, 'image/jpeg'); if (u) thumbUrl = u; }
   } catch (e) {}
 
   const { data: photo, error } = await sb.from('photos').insert({

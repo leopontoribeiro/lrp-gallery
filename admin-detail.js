@@ -379,6 +379,7 @@ async function deleteSelectedPhotos() {
   for (const r of (rows || [])) {
     if (r.storage_path) {
       await _deleteR2(r.storage_path);
+      await _deleteR2(`${r.storage_path}_thumb.jpg`);
       await _deleteR2(`${r.storage_path}_thumb.webp`);
     }
   }
@@ -430,7 +431,7 @@ async function removeDuplicatePhotos() {
   if (!ok) return;
 
   for (const p of toDelete) {
-    if (p.storage_path) { await _deleteR2(p.storage_path); await _deleteR2(`${p.storage_path}_thumb.webp`); }
+    if (p.storage_path) { await _deleteR2(p.storage_path); await _deleteR2(`${p.storage_path}_thumb.jpg`); await _deleteR2(`${p.storage_path}_thumb.webp`); }
   }
   const { error: delErr } = await sb.from('photos').delete().in('id', toDelete.map(p => p.id));
   if (delErr) { toast('Erro ao apagar: ' + delErr.message, 'error'); return; }
@@ -584,6 +585,7 @@ async function deletePhoto(photoId, storagePath) {
   // Fotos vivem no R2 (worker lrp-gallery-signed), não mais no Supabase Storage.
   if (storagePath) {
     await _deleteR2(storagePath);
+    await _deleteR2(`${storagePath}_thumb.jpg`);
     await _deleteR2(`${storagePath}_thumb.webp`);
   }
   await sb.from('photos').delete().eq('id', photoId);

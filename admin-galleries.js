@@ -289,7 +289,12 @@ function clearCoverFile() {
 
 // Fotos vivem no R2 (worker lrp-gallery-signed), não no Supabase Storage —
 // esse bucket foi apagado na migração pro R2. Mesma convenção do upload.mjs
-// (CLI): key = galleries/<id>/<ts>_<pos>_<nome>, thumb = key + "_thumb.webp".
+// (CLI): key = galleries/<id>/<ts>_<pos>_<nome>, thumb = key + "_thumb.jpg".
+// (JPEG desde 16/set/2026 — o encoder WebP do canvas variava demais entre
+// navegadores: a mesma foto podia sair com 40KB ou 700KB dependendo de qual
+// Chrome/Safari gerou o upload. JPEG do canvas é muito mais consistente.
+// Fotos enviadas antes disso ainda têm "_thumb.webp" no R2 — por isso as
+// rotinas de exclusão abaixo tentam apagar as duas extensões.)
 const R2_UPLOAD_BASE = 'https://lrp-gallery-signed.lrp-gallery.workers.dev';
 
 function _loadImageEl(file) {
@@ -326,7 +331,7 @@ function _makeThumbBlob(im, w, h) {
   const canvas = document.createElement('canvas');
   canvas.width = tw; canvas.height = th;
   canvas.getContext('2d').drawImage(im, 0, 0, tw, th);
-  return new Promise(res => canvas.toBlob(res, 'image/webp', 0.8));
+  return new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.8));
 }
 
 // Pede à RPC (admin autenticado) uma assinatura de curta duração pra essa key
@@ -372,7 +377,7 @@ async function uploadGalleryPhoto(file, galleryId, position) {
       : await showDupeChoice(`Já existe uma foto chamada "${file.name}" nesta galeria.`);
     if (choice === 'replace-all') _dupePolicy = 'replace-all';
     if (choice === 'replace' || choice === 'replace-all') {
-      if (dup.storage_path) { await _deleteR2(dup.storage_path); await _deleteR2(`${dup.storage_path}_thumb.webp`); await _deleteR2(`${dup.storage_path}_lg.jpg`); }
+      if (dup.storage_path) { await _deleteR2(dup.storage_path); await _deleteR2(`${dup.storage_path}_thumb.jpg`); await _deleteR2(`${dup.storage_path}_thumb.webp`); await _deleteR2(`${dup.storage_path}_lg.jpg`); }
       await sb.from('photos').delete().eq('id', dup.id);
     }
   }
@@ -391,7 +396,7 @@ async function uploadGalleryPhoto(file, galleryId, position) {
 
   const fullUrl = await _putR2(baseKey, file, file.type || 'application/octet-stream');
   if (!fullUrl) return null;
-  const thumbUrl = thumbBlob ? await _putR2(`${baseKey}_thumb.webp`, thumbBlob, 'image/webp') : fullUrl;
+  const thumbUrl = thumbBlob ? await _putR2(`${baseKey}_thumb.jpg`, thumbBlob, 'image/jpeg') : fullUrl;
   // Falha aqui não impede o envio da foto — só faz a marca d'água cair no
   // caminho lento (e limitado) de processar o original.
   if (lgBlob) { try { await _putR2(`${baseKey}_lg.jpg`, lgBlob, 'image/jpeg'); } catch (e) {} }
