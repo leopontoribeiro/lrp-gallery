@@ -738,12 +738,37 @@ function qrCurrentGallery() {
 function renderResLinks(g) {
   _setResLinkRow('high', g.high_res_url || null);
   _setResLinkRow('low', g.low_res_url || null);
+  _setResLinkLabel('high', g.high_res_label || null);
+  _setResLinkLabel('low', g.low_res_label || null);
 }
 function _setResLinkRow(kind, url) {
   const prefix = kind === 'high' ? 'detail-link-hi' : 'detail-link-lo';
   document.getElementById(prefix).textContent = url || '— não definido —';
   document.getElementById(prefix + '-qr').style.display = url ? 'inline-flex' : 'none';
   document.getElementById(prefix + '-del').style.display = url ? 'inline-flex' : 'none';
+}
+// Rótulo customizado por galeria (ex.: "FOTOS EM ALTA 17SET26"). Vazio/null
+// cai no texto padrão de sempre — nao muda nada nas galerias que nunca
+// usaram "Renomear".
+function _setResLinkLabel(kind, label) {
+  const el = document.getElementById(kind === 'high' ? 'detail-link-hi-label' : 'detail-link-lo-label');
+  if (!el) return;
+  const padrao = kind === 'high' ? 'Link fotos em alta' : 'Link fotos em baixa';
+  el.textContent = (label && label.trim()) ? label.trim() : padrao;
+}
+async function renameResLink(kind) {
+  if (!currentGalleryId) return;
+  const col = kind === 'high' ? 'high_res_label' : 'low_res_label';
+  const el = document.getElementById(kind === 'high' ? 'detail-link-hi-label' : 'detail-link-lo-label');
+  const padrao = kind === 'high' ? 'Link fotos em alta' : 'Link fotos em baixa';
+  const atual = el && el.textContent !== padrao ? el.textContent : '';
+  const novo = prompt('Nome pra este link (deixe vazio para voltar ao padrão "' + padrao + '"):', atual);
+  if (novo == null) return;
+  const clean = novo.trim();
+  const { error } = await sb.from('galleries').update({ [col]: clean || null }).eq('id', currentGalleryId);
+  if (error) { toast('Erro ao salvar: ' + error.message, 'error'); return; }
+  _setResLinkLabel(kind, clean || null);
+  toast('Nome salvo', 'success');
 }
 async function setResLink(kind) {
   if (!currentGalleryId) return;

@@ -1266,17 +1266,19 @@ body {
         </div>
 
         <div class="link-box">
-          <span class="link-box-label">Link fotos em alta</span>
+          <span class="link-box-label" id="detail-link-hi-label">Link fotos em alta</span>
           <span class="link-box-url" id="detail-link-hi">— não definido —</span>
           <button class="btn btn-ghost" onclick="setResLink('high')">Substituir</button>
+          <button class="btn btn-ghost" onclick="renameResLink('high')" title="Troca o texto 'Link fotos em alta' por um nome seu (ex: FOTOS EM ALTA 17SET26)">Renomear</button>
           <button class="btn btn-ghost" id="detail-link-hi-qr" style="display:none" onclick="showQRForLink(document.getElementById('detail-link-hi').textContent)">QR Code</button>
           <button class="btn btn-ghost" id="detail-link-hi-del" style="display:none" onclick="clearResLink('high')">Apagar</button>
         </div>
 
         <div class="link-box">
-          <span class="link-box-label">Link fotos em baixa</span>
+          <span class="link-box-label" id="detail-link-lo-label">Link fotos em baixa</span>
           <span class="link-box-url" id="detail-link-lo">— não definido —</span>
           <button class="btn btn-ghost" onclick="setResLink('low')">Substituir</button>
+          <button class="btn btn-ghost" onclick="renameResLink('low')" title="Troca o texto 'Link fotos em baixa' por um nome seu (ex: FOTOS EM ALTA 18SET26)">Renomear</button>
           <button class="btn btn-ghost" id="detail-link-lo-qr" style="display:none" onclick="showQRForLink(document.getElementById('detail-link-lo').textContent)">QR Code</button>
           <button class="btn btn-ghost" id="detail-link-lo-del" style="display:none" onclick="clearResLink('low')">Apagar</button>
         </div>
