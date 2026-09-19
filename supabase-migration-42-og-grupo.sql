@@ -23,7 +23,7 @@ returns table(name text, cover_key text)
 language plpgsql security definer stable
 set search_path = public as $$
 declare
-  found boolean;
+  n_found int;
 begin
   -- 1) Galeria (comportamento de sempre — migração 33 inalterada em espírito)
   return query
@@ -52,8 +52,8 @@ begin
     where g.access_token = p_token and g.status = 'live' and g.deleted_at is null
     limit 1;
 
-  get diagnostics found = row_count > 0;
-  if found then return; end if;
+  get diagnostics n_found = row_count;
+  if n_found > 0 then return; end if;
 
   -- 2) Grupo de galerias: capa do próprio grupo, senão 1ª foto da 1ª
   --    galeria "live" dentro dele (mesmo fallback do get_public_group).
