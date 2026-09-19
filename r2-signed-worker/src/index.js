@@ -135,10 +135,16 @@ export default {
       if (key.startsWith('backups/') && env.BACKUP) {
         await env.BACKUP.put(key, req.body, { httpMetadata: { contentType } });
       } else {
-        // Dual-write: a foto vai para PHOTOS e, em paralelo, para BACKUP.
+        // Dual-write: a foto vai para PHOTOS e, em paralelo, para BACKUP —
+        // só o ORIGINAL. Derivados (_thumb.jpg, _thumb.webp, _lg.jpg) são
+        // recriáveis a partir do original a qualquer momento, então
+        // replicá-los também só dobra o armazenamento sem ganhar proteção
+        // nenhuma (ver _isReplicableDerivative, usado pelo reconcile()).
         const buf = await req.arrayBuffer();
         await env.PHOTOS.put(key, buf, { httpMetadata: { contentType } });
-        if (env.BACKUP) ctx.waitUntil(env.BACKUP.put(key, buf, { httpMetadata: { contentType } }));
+        if (env.BACKUP && !_isReplicableDerivative(key)) {
+          ctx.waitUntil(env.BACKUP.put(key, buf, { httpMetadata: { contentType } }));
+        }
       }
       return new Response('ok', { status: 200, headers: CORS });
     }
@@ -278,6 +284,7 @@ export default {
     ctx.waitUntil(retentionCleanup(env));
     ctx.waitUntil(backupDatabase(env));
     ctx.waitUntil(cleanupOldBackupDumps(env));
+    ctx.waitUntil(purgeReplicatedDerivatives(env));
     ctx.waitUntil(healthcheck(env));
   },
 };
@@ -285,6 +292,14 @@ export default {
 // Copia para BACKUP até 'n' objetos APÓS a key 'after' (resumível no nível do
 // objeto via startAfter). Pula o que já existe com o mesmo tamanho.
 // Devolve { last, done } para o chamador continuar o loop.
+// Derivados (_thumb.jpg, _thumb.webp, _lg.jpg) são sempre recriáveis a
+// partir do original que ainda está em PHOTOS — não precisam de uma segunda
+// cópia em BACKUP. Sem isso, o backup replicava 3 arquivos por foto (original
+// + thumb + lg) quando só o original é insubstituível se PHOTOS for perdido.
+function _isReplicableDerivative(key) {
+  return key.endsWith('_thumb.jpg') || key.endsWith('_thumb.webp') || key.endsWith('_lg.jpg');
+}
+
 async function replicate(env, after = '', n = 100) {
   if (!env.BACKUP) return { error: 'no BACKUP bucket' };
   const list = await env.PHOTOS.list({ startAfter: after || undefined, limit: n });
@@ -293,6 +308,7 @@ async function replicate(env, after = '', n = 100) {
     // Isola cada objeto: um problemático é pulado (não trava o lote nem o cursor).
     try {
       if (o.key.startsWith('backups/')) { last = o.key; continue; } // dumps não se replicam
+      if (_isReplicableDerivative(o.key)) { last = o.key; continue; } // recriável a partir do original
       const b = await env.BACKUP.head(o.key);
       if (b && b.size === o.size) skipped++;
       else {
@@ -802,6 +818,51 @@ async function cleanupOldBackupDumps(env) {
     })).catch(() => {});
   } catch (e) {
     await logServerError(env, 'cleanupOldBackupDumps falhou', e.message);
+  }
+}
+
+// Apaga do BACKUP os derivados (_thumb.jpg, _thumb.webp, _lg.jpg) que já
+// tinham sido replicados ANTES desta mudança — o dual-write e o reconcile()
+// pararam de copiar derivado novo, mas o que já estava lá continuava
+// ocupando espaço pra sempre. São recriáveis a partir do original (que
+// continua replicado normalmente), então apagar do BACKUP não perde
+// proteção nenhuma — só libera o espaço que nunca precisava ter sido
+// gasto em segunda cópia.
+//
+// Roda em lotes pequenos por execução (mesmo padrão do reconcile()) pra
+// limitar o alcance de qualquer engano: o critério é só o SUFIXO da key
+// (_thumb.jpg / _thumb.webp / _lg.jpg), nunca apaga nada que não bata
+// exatamente com esses três padrões — o original (sem sufixo) nunca é
+// tocado por esta função.
+const PURGE_DERIVATIVES_BATCH = 3000;
+async function purgeReplicatedDerivatives(env) {
+  if (!env.BACKUP) return;
+  try {
+    const stObj = await env.BACKUP.get('_state/purge_derivatives_after');
+    const startAfter = stObj ? await stObj.text() : '';
+    let scanned = 0, toDelete = [], last = startAfter, done = false;
+
+    while (scanned < PURGE_DERIVATIVES_BATCH) {
+      const list = await env.BACKUP.list({ startAfter: last || undefined, limit: 1000 });
+      for (const o of list.objects) {
+        if (_isReplicableDerivative(o.key)) toDelete.push(o.key);
+        last = o.key;
+      }
+      scanned += list.objects.length;
+      if (!list.truncated) { done = true; break; }
+      if (scanned >= PURGE_DERIVATIVES_BATCH) break;
+    }
+
+    for (let i = 0; i < toDelete.length; i += 1000) {
+      await env.BACKUP.delete(toDelete.slice(i, i + 1000));
+    }
+
+    await env.BACKUP.put('_state/purge_derivatives_after', done ? '' : last);
+    await env.BACKUP.put('_state/last_purge_derivatives.json', JSON.stringify({
+      at: new Date().toISOString(), apagados: toDelete.length, scanned, done,
+    })).catch(() => {});
+  } catch (e) {
+    await logServerError(env, 'purgeReplicatedDerivatives falhou', e.message);
   }
 }
 

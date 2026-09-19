@@ -527,13 +527,17 @@ async function addPhotosToDetail(files) {
 async function _runUploadBatch(items, list) {
   const { data: existing } = await sb.from('photos').select('position').eq('gallery_id', currentGalleryId).order('position', {ascending: false}).limit(1);
   let pos = (existing?.[0]?.position ?? -1) + 1;
+  // Busca 1x por lote (não por foto) se a galeria tem marca d'água ligada —
+  // decide se vale gerar o derivado _lg.jpg (ver comentário em uploadGalleryPhoto).
+  const { data: gRow } = await sb.from('galleries').select('watermark').eq('id', currentGalleryId).maybeSingle();
+  const watermarkOn = !!gRow?.watermark;
 
   let ok = 0, failed = 0;
   for (const it of items) {
     if (it.done) { ok++; continue; }
     setProgress(it.id, 30);
     let photoId = null;
-    try { photoId = await uploadGalleryPhoto(it.file, currentGalleryId, pos++); }
+    try { photoId = await uploadGalleryPhoto(it.file, currentGalleryId, pos++, watermarkOn); }
     catch (e) { console.error('addPhotosToDetail:', e); }
     setProgress(it.id, 100, !!photoId, !photoId);
     if (photoId) { it.done = true; ok++; } else { failed++; }
@@ -565,8 +569,9 @@ async function addCoverToDetail(file) {
   const { data: existing } = await sb.from('photos').select('position')
     .eq('gallery_id', currentGalleryId).order('position', { ascending: false }).limit(1);
   const pos = (existing?.[0]?.position ?? -1) + 1;
+  const { data: gRow } = await sb.from('galleries').select('watermark').eq('id', currentGalleryId).maybeSingle();
 
-  const photoId = await uploadGalleryPhoto(file, currentGalleryId, pos);
+  const photoId = await uploadGalleryPhoto(file, currentGalleryId, pos, !!gRow?.watermark);
   if (!photoId) { toast('Erro ao enviar a capa', 'error'); return; }
 
   const { error } = await sb.from('galleries')

@@ -365,7 +365,7 @@ async function _deleteR2(key) {
 let _dupePolicy = null;
 function resetDupePolicy() { _dupePolicy = null; }
 
-async function uploadGalleryPhoto(file, galleryId, position) {
+async function uploadGalleryPhoto(file, galleryId, position, watermarkOn) {
   // Já existe foto com esse nome nesta galeria? Pergunta substituir ou duplicar.
   const { data: dup } = await sb.from('photos').select('id,storage_path,size_bytes')
     .eq('gallery_id', galleryId).eq('filename', file.name).maybeSingle();
@@ -388,7 +388,14 @@ async function uploadGalleryPhoto(file, galleryId, position) {
 
   const { im, url, w, h } = await _loadImageEl(file);
   const thumbBlob = await _makeThumbBlob(im, w, h);
-  const lgBlob    = await _makeLgBlob(im, w, h);
+  // _lg.jpg só serve pra aplicar marca d'água sem estourar a memória do
+  // Worker (ver r2-signed-worker: computeWatermarked usa esse derivado).
+  // Gerar/subir/replicar esse arquivo em galeria SEM marca d'água é
+  // armazenamento puro que nunca é lido — por isso só criamos quando a
+  // galeria tem watermark ligado no momento do upload. Se a galeria ligar
+  // a marca d'água depois, o Worker já tem fallback pro original (até 8MB;
+  // acima disso pede reenvio) — mesmo caminho que já cobre fotos antigas.
+  const lgBlob    = watermarkOn ? await _makeLgBlob(im, w, h) : null;
   if (url) URL.revokeObjectURL(url);
 
   const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -473,9 +480,11 @@ async function createGallery() {
   let pos = 0;
 
   // 2. Upload da capa (se escolhida) — fica em position 0.
+  // Galeria recém-criada: watermark começa sempre desligado (default da
+  // tabela) — não há como o usuário já ter ligado antes deste ponto.
   let coverPhotoId = null;
   if (pendingCoverFile) {
-    coverPhotoId = await uploadGalleryPhoto(pendingCoverFile, gallery.id, pos++);
+    coverPhotoId = await uploadGalleryPhoto(pendingCoverFile, gallery.id, pos++, false);
   }
 
   // 3. Upload das fotos do álbum
@@ -483,7 +492,7 @@ async function createGallery() {
     for(const {id, file} of pendingFiles) {
       setProgress(id, 30);
       let photoId = null;
-      try { photoId = await uploadGalleryPhoto(file, gallery.id, pos++); }
+      try { photoId = await uploadGalleryPhoto(file, gallery.id, pos++, false); }
       catch (e) { console.error('createGallery (foto):', e); }
       setProgress(id, 100, !!photoId, !photoId);
     }
