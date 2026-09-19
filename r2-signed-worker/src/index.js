@@ -135,16 +135,14 @@ export default {
       if (key.startsWith('backups/') && env.BACKUP) {
         await env.BACKUP.put(key, req.body, { httpMetadata: { contentType } });
       } else {
-        // Dual-write: a foto vai para PHOTOS e, em paralelo, para BACKUP —
-        // só o ORIGINAL. Derivados (_thumb.jpg, _thumb.webp, _lg.jpg) são
-        // recriáveis a partir do original a qualquer momento, então
-        // replicá-los também só dobra o armazenamento sem ganhar proteção
-        // nenhuma (ver _isReplicableDerivative, usado pelo reconcile()).
+        // Fotos NÃO são replicadas pro BACKUP — o usuário já mantém 2 outras
+        // cópias fora do R2 (Google Drive + backup interno próprio), então
+        // uma 3ª cópia aqui só dobrava o armazenamento cobrado sem adicionar
+        // proteção real. Só PHOTOS é a fonte das fotos agora; BACKUP guarda
+        // apenas os dumps do banco (branch 'backups/' acima) e os arquivos
+        // de estado dos crons (_state/*.json).
         const buf = await req.arrayBuffer();
         await env.PHOTOS.put(key, buf, { httpMetadata: { contentType } });
-        if (env.BACKUP && !_isReplicableDerivative(key)) {
-          ctx.waitUntil(env.BACKUP.put(key, buf, { httpMetadata: { contentType } }));
-        }
       }
       return new Response('ok', { status: 200, headers: CORS });
     }
@@ -269,8 +267,7 @@ export default {
     return new Response('method not allowed', { status: 405, headers: CORS });
   },
 
-  // Cron diário: reconciliação. O incremental já é feito pelo dual-write no PUT;
-  // isto é rede de segurança — varre um lote por dia, retomando de onde parou.
+  // Cron diário.
   async scheduled(event, env, ctx) {
     // Cron novo (a cada 10min, ver wrangler.toml): so o backfill de taken_at,
     // roda mais vezes pra zerar o backlog rapido sem competir com os jobs
@@ -279,12 +276,16 @@ export default {
       ctx.waitUntil(backfillTakenAt(env));
       return;
     }
-    ctx.waitUntil(reconcile(env));
+    // reconcile() (replicava PHOTOS -> BACKUP) foi desligado: o usuário
+    // mantém as fotos em 2 outras cópias fora do R2 (Google Drive + backup
+    // interno), então essa 3ª cópia só dobrava o armazenamento cobrado. A
+    // função continua definida abaixo (histórico/caso precise reativar),
+    // só não é mais chamada aqui.
     ctx.waitUntil(cleanupPendingOrders(env));
     ctx.waitUntil(retentionCleanup(env));
     ctx.waitUntil(backupDatabase(env));
     ctx.waitUntil(cleanupOldBackupDumps(env));
-    ctx.waitUntil(purgeReplicatedDerivatives(env));
+    ctx.waitUntil(purgeReplicatedPhotos(env));
     ctx.waitUntil(healthcheck(env));
   },
 };
@@ -821,48 +822,48 @@ async function cleanupOldBackupDumps(env) {
   }
 }
 
-// Apaga do BACKUP os derivados (_thumb.jpg, _thumb.webp, _lg.jpg) que já
-// tinham sido replicados ANTES desta mudança — o dual-write e o reconcile()
-// pararam de copiar derivado novo, mas o que já estava lá continuava
-// ocupando espaço pra sempre. São recriáveis a partir do original (que
-// continua replicado normalmente), então apagar do BACKUP não perde
-// proteção nenhuma — só libera o espaço que nunca precisava ter sido
-// gasto em segunda cópia.
+// Apaga do BACKUP TODA foto que já tinha sido replicada (original E
+// derivados) — o usuário mantém as fotos em 2 outras cópias fora do R2
+// (Google Drive + backup interno próprio), então essa réplica no R2 é uma
+// 3ª camada que ele decidiu não precisar mais. NÃO toca em 'backups/'
+// (dumps do banco — continuam, o usuário pediu pra manter) nem em
+// '_state/' (arquivos de controle dos próprios crons).
 //
-// Roda em lotes pequenos por execução (mesmo padrão do reconcile()) pra
-// limitar o alcance de qualquer engano: o critério é só o SUFIXO da key
-// (_thumb.jpg / _thumb.webp / _lg.jpg), nunca apaga nada que não bata
-// exatamente com esses três padrões — o original (sem sufixo) nunca é
-// tocado por esta função.
-const PURGE_DERIVATIVES_BATCH = 3000;
-async function purgeReplicatedDerivatives(env) {
+// Roda em lotes pequenos por execução (mesmo padrão de reconcile()) e é
+// resumível via cursor salvo — pra um bucket grande não estourar o tempo
+// do cron, e pra dar pra acompanhar o progresso dia a dia.
+const PURGE_PHOTOS_BATCH = 3000;
+function _isPurgeablePhotoKey(key) {
+  return !key.startsWith('backups/') && !key.startsWith('_state/');
+}
+async function purgeReplicatedPhotos(env) {
   if (!env.BACKUP) return;
   try {
-    const stObj = await env.BACKUP.get('_state/purge_derivatives_after');
+    const stObj = await env.BACKUP.get('_state/purge_photos_after');
     const startAfter = stObj ? await stObj.text() : '';
     let scanned = 0, toDelete = [], last = startAfter, done = false;
 
-    while (scanned < PURGE_DERIVATIVES_BATCH) {
+    while (scanned < PURGE_PHOTOS_BATCH) {
       const list = await env.BACKUP.list({ startAfter: last || undefined, limit: 1000 });
       for (const o of list.objects) {
-        if (_isReplicableDerivative(o.key)) toDelete.push(o.key);
+        if (_isPurgeablePhotoKey(o.key)) toDelete.push(o.key);
         last = o.key;
       }
       scanned += list.objects.length;
       if (!list.truncated) { done = true; break; }
-      if (scanned >= PURGE_DERIVATIVES_BATCH) break;
+      if (scanned >= PURGE_PHOTOS_BATCH) break;
     }
 
     for (let i = 0; i < toDelete.length; i += 1000) {
       await env.BACKUP.delete(toDelete.slice(i, i + 1000));
     }
 
-    await env.BACKUP.put('_state/purge_derivatives_after', done ? '' : last);
-    await env.BACKUP.put('_state/last_purge_derivatives.json', JSON.stringify({
+    await env.BACKUP.put('_state/purge_photos_after', done ? '' : last);
+    await env.BACKUP.put('_state/last_purge_photos.json', JSON.stringify({
       at: new Date().toISOString(), apagados: toDelete.length, scanned, done,
     })).catch(() => {});
   } catch (e) {
-    await logServerError(env, 'purgeReplicatedDerivatives falhou', e.message);
+    await logServerError(env, 'purgeReplicatedPhotos falhou', e.message);
   }
 }
 
