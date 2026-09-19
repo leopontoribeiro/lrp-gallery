@@ -83,7 +83,7 @@ export async function onRequest(context) {
     if (!r.ok) return withDebug(res, 'rpc-' + r.status);
     const rows = await r.json();
     const meta = Array.isArray(rows) ? rows[0] : rows;
-    if (!meta || !meta.name) return withDebug(res, 'no-meta'); // token não é de galeria (ex.: grupo)
+    if (!meta || !meta.name) return withDebug(res, 'no-meta'); // token não existe/não está live (get_og_meta já tenta galeria e grupo)
 
     const pageTitle = `${meta.name} · @eusouleandroribeiro`;
     // og:site_name já é "@eusouleandroribeiro" — repetir no og:title fazia o
